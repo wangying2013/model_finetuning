@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模型精调 - Muses 平台</title>
+<style>
+:root{--primary:#0057FF;--primary-hover:#004AD9;--primary-pressed:#003DB3;--primary-light:#E5EEFF;--primary-lighter:rgba(0,87,255,0.08);--btn:#0057FF;--btn-h:#004AD9;--btn-a:#003DB3;--btn-d:rgba(0,87,255,0.3);--ok:#35A04F;--ok-bg:#EAF8ED;--err:#FF3B30;--err-bg:#FFEBEA;--warn:#FF9500;--warn-bg:#FFF4E5;--info:#0057FF;--info-bg:#E5EEFF;--pur:#9246E0;--pur-bg:rgba(146,70,224,.1);--t1:#0A1B33;--t2:#4C596A;--t3:rgba(0,0,0,.35);--t4:#BFBFBF;--td:#D9D9D9;--bg:#fff;--bg2:#F3F4F6;--bg3:#F9FAFB;--bd:#D9D9D9;--bd2:rgba(0,0,0,.08);--sh1:0 0 0 1px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);--sh2:0px 2px 4px 0px rgba(0,0,0,.14),0px 0px 1px 0px rgba(0,0,0,.16);--sh3:0px 0px 1px 0px rgba(0,0,0,.3),0px 4px 14px 0px rgba(0,0,0,.1);--r1:4px;--r2:4px;--r3:8px;--rp:100px;--ff:"PingFang SC","PingFang TC","PingFang HK",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Helvetica,Arial,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--ff);font-size:14px;color:var(--t1);background:var(--bg2);min-height:100vh}
+.app{display:flex;min-height:100vh}
+/* Sidebar */
+.sb{width:220px;background:#fff;color:var(--t1);flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--bd2);height:100vh;position:sticky;top:0;overflow:hidden}
+.sb-logo{padding:20px 16px;font-size:16px;font-weight:600;border-bottom:1px solid var(--bd2);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sb-logo .ico{width:28px;height:28px;background:var(--btn);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.sb-sec{padding:12px 0}
+.sb-sec-t{padding:8px 16px 4px;font-size:11px;color:var(--t3);letter-spacing:.5px}
+.sb-i{padding:8px 16px;font-size:13px;color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:10px;transition:all .15s;border-left:2px solid transparent;margin:1px 8px;border-radius:var(--r1)}
+.sb-i:hover{color:var(--t1);background:var(--bg3)}
+.sb-i.on{color:var(--primary);background:var(--primary-light);border-left-color:var(--primary);font-weight:500}
+.sb-i .ic{font-size:16px;width:20px;text-align:center}
+/* Workspace switcher */
+.sb-ws{padding:0 12px 12px;border-bottom:1px solid var(--bd2);flex-shrink:0}
+.sb-ws-sel{width:100%;height:32px;padding:0 10px;border:1px solid var(--bd);border-radius:var(--r2);font-size:13px;font-family:var(--ff);color:var(--t1);background:#fff;outline:none;cursor:pointer;transition:all .15s;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%234C596A' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.sb-ws-sel:hover{border-color:var(--primary-focus)}
+.sb-ws-sel:focus{border-color:var(--primary-focus);box-shadow:0 0 0 2px rgba(5,130,255,.08)}
+/* Sidebar nav scrollable */
+.sb-nav{flex:1;overflow-y:auto;min-height:0}
+/* Sidebar user */
+.sb-user{padding:12px 16px;border-top:1px solid var(--bd2);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.sb-user-av{width:32px;height:32px;border-radius:50%;background:var(--btn);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.sb-user-info{display:flex;flex-direction:column;min-width:0}
+.sb-user-nm{font-size:13px;font-weight:500;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-user-id{font-size:11px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Main */
+.mn{flex:1;display:flex;flex-direction:column;min-width:0}
+.tb{height:48px;background:#fff;border-bottom:1px solid var(--bd2);display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0}
+.tb-bc{font-size:13px;color:var(--t3)}.tb-bc b{color:var(--t1);font-weight:500}
+.tb-r{margin-left:auto;display:flex;align-items:center;gap:16px}
+.tb-av{width:28px;height:28px;border-radius:50%;background:var(--btn);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.pb{flex:1;padding:20px 24px;overflow-y:auto}
+/* Pages */
+.pg{display:none}.pg.on{display:block;animation:fi .25s ease}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* Btn */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;cursor:pointer;font-size:13px;font-family:var(--ff);border-radius:var(--r2);transition:all .15s;font-weight:500}
+.bp{background:var(--btn);color:#fff;padding:8px 20px}.bp:hover{background:var(--btn-h)}.bp:active{background:var(--btn-a)}.bp:disabled{background:var(--btn-d);cursor:not-allowed}
+.bc{background:#fff;color:var(--t2);padding:8px 20px;border:1px solid var(--bd)}.bc:hover{border-color:var(--primary-focus);color:var(--primary-focus)}
+.bt{background:transparent;color:var(--primary);padding:4px 8px}.bt:hover{background:var(--primary-light)}
+.bdt{background:transparent;color:var(--err);padding:4px 8px}.bdt:hover{background:var(--err-bg)}
+.bs{padding:5px 12px;font-size:12px}
+/* Card */
+.cd{background:#fff;border-radius:var(--r4);border:1px solid #EBEBEB}
+.cd-h{padding:16px 20px;border-bottom:1px solid var(--bd2);display:flex;align-items:center;justify-content:space-between}
+.cd-h h3{font-size:15px;font-weight:600}
+.cd-b{padding:20px}
+/* Form */
+.fg{margin-bottom:20px}
+.fl{display:block;font-size:14px;color:var(--t2);margin-bottom:6px;font-weight:500}
+.fl .rq{color:var(--err);margin-left:2px}
+.fi,.fta{width:100%;height:32px;padding:0 12px;border:1px solid var(--bd);border-radius:var(--r2);font-size:14px;font-family:var(--ff);color:var(--t1);background:#fff;transition:all .15s;outline:none}
+.fs{width:100%;height:32px;padding:0 10px;border:1px solid var(--bd);border-radius:var(--r2);font-size:14px;font-family:var(--ff);color:var(--t1);background:#fff;outline:none;cursor:pointer;transition:all .15s;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%234C596A' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.fta{height:auto;padding:8px 12px;resize:vertical;min-height:80px}
+.fi:hover,.fs:hover,.fta:hover{border-color:var(--primary-active)}
+.fi:focus,.fs:focus,.fta:focus{border-color:var(--primary-focus);box-shadow:0 0 0 2px rgba(5,130,255,.08)}
+.fi::placeholder,.fta::placeholder{color:var(--t4);-webkit-font-smoothing:antialiased}
+.fh{font-size:12px;color:var(--t3);margin-top:4px}
+.fe{font-size:12px;color:var(--err);margin-top:4px;display:none}
+.fi.err,.fs.err,.fta.err{border-color:var(--err)!important}
+.fs-auto{width:auto;min-width:140px}
+/* Tag */
+.tg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--r1);font-size:12px;font-weight:500}
+.tg-ok{background:var(--ok-bg);color:var(--ok)}.tg-er{background:var(--err-bg);color:var(--err)}
+.tg-wr{background:var(--warn-bg);color:var(--warn)}.tg-if{background:var(--info-bg);color:var(--info)}
+.tg-pu{background:var(--pur-bg);color:var(--pur)}.tg-df{background:var(--bg3);color:var(--t2)}
+/* Table */
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}
+thead th{background:var(--bg2);padding:10px 16px;text-align:left;font-size:13px;font-weight:500;color:var(--t2);border-bottom:1px solid var(--bd2);white-space:nowrap}
+tbody td{padding:12px 16px;border-bottom:1px solid var(--bd2);font-size:13px;color:var(--t1)}
+tbody tr:hover{background:var(--bg3)}tbody tr{cursor:pointer}
+/* Steps - vertical */
+.stps{width:200px;flex-shrink:0;padding:24px 20px;background:#fff;border-right:1px solid var(--bd2);display:flex;flex-direction:column;gap:0}
+.stp{display:flex;align-items:flex-start;gap:10px;position:relative;padding-bottom:0}
+.stp-n{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;border:2px solid var(--bd);color:var(--t3);flex-shrink:0;transition:all .2s}
+.stp.on .stp-n,.stp.dn .stp-n{border-color:var(--btn);background:var(--btn);color:#fff}
+.stp-t{font-size:13px;color:var(--t3);white-space:nowrap;line-height:28px}
+.stp.on .stp-t{color:var(--t1);font-weight:500}.stp.dn .stp-t{color:var(--btn)}
+.stp-l{display:block;width:2px;height:16px;background:var(--bd2);margin:0 0 0 13px;border-radius:1px}.stp.dn .stp-l{background:var(--btn)}
+/* Create layout with sidebar steps */
+.crt-wrap{display:flex;flex:1;min-height:0}
+.crt-body{flex:1;padding:24px;overflow-y:auto}
+.crt-right{width:260px;flex-shrink:0;background:#fff;border-left:1px solid var(--bd2);padding:20px;overflow-y:auto}
+.crt-right h4{font-size:14px;font-weight:600;margin-bottom:14px;color:var(--t1)}
+.sum-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;font-size:13px;border-bottom:1px solid var(--bd2)}
+.sum-row:last-child{border-bottom:none}
+.sum-label{color:var(--t3);white-space:nowrap;margin-right:8px}
+.sum-val{color:var(--t1);text-align:right;word-break:break-all;min-width:0}
+.sum-val.empty{color:var(--td)}
+.crt-foot{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--bd2);padding:12px 24px;display:flex;justify-content:flex-end;align-items:center;gap:8px;z-index:10}
+/* Tabs */
+.tbs{display:flex;border-bottom:1px solid var(--bd2);gap:0;margin-bottom:20px}
+.tb-i{padding:10px 20px;font-size:14px;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;font-weight:500}
+.tb-i:hover{color:var(--primary-focus)}.tb-i.on{color:var(--primary);border-bottom-color:var(--primary);font-weight:500}
+/* Radio */
+.rg{display:flex;gap:24px;flex-wrap:wrap}
+.ri{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px}
+.ri input{accent-color:var(--btn)}
+/* Select cards */
+.scs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.sc{border:1px solid var(--bd);border-radius:8px;padding:14px 16px;cursor:pointer;transition:all .15s}
+.sc:hover{border-color:var(--primary-active)}.sc.on{border-color:var(--btn);background:var(--primary-light)}
+.sc .ct{font-size:14px;font-weight:600;margin-bottom:4px}.sc .cd2{font-size:12px;color:var(--t3);line-height:1.5}
+/* Dataset row */
+.dr{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid var(--bd);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+.dr:hover{border-color:var(--primary-active)}.dr.on{border-color:var(--btn);background:var(--primary-light)}
+.dr .dn{font-size:13px;font-weight:500}.dr .di{font-size:12px;color:var(--t3)}
+/* Param grid - 2 columns fixed */
+.pg2{display:grid;grid-template-columns:1fr 1fr;gap:0 32px}
+/* Stat cards */
+.sts{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.st{background:#fff;border-radius:var(--r4);padding:16px;border:1px solid #EBEBEB}
+.st .sl{font-size:12px;color:var(--t3);margin-bottom:6px}.st .sv{font-size:22px;font-weight:700;color:var(--t1)}.st .ss{font-size:12px;color:var(--t3);margin-top:4px}
+/* Info grid */
+.ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px 32px}
+.ii{display:flex;gap:8px}.ii .il{font-size:13px;color:var(--t3);white-space:nowrap;min-width:80px}.ii .iv{font-size:13px;color:var(--t1);word-break:break-all}
+/* Detail action bar */
+.d-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:#fff;border-bottom:1px solid var(--bd2);flex-shrink:0}
+.d-bar-l{display:flex;align-items:center;gap:8px}
+.d-bar-r{display:flex;align-items:center;gap:8px}
+/* Detail header */
+.dh{display:flex;align-items:flex-start;gap:16px;padding:20px 24px;background:#fff;border-bottom:1px solid var(--bd2);flex-shrink:0}
+.dh-ico{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#9246E0,#6C3FD0);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;color:#fff;box-shadow:0 2px 8px rgba(146,70,224,.25)}
+.dh-info{display:flex;flex-direction:column;gap:6px;min-width:0}
+.dh-row1{display:flex;align-items:center;gap:10px}
+.dh-nm{font-size:20px;font-weight:700;color:var(--t1);line-height:1.3;word-break:break-all}
+.dh-meta{display:flex;align-items:center;gap:0;font-size:13px;color:var(--t3);flex-wrap:wrap}
+.dh-meta span{white-space:nowrap}
+.dh-meta .dm-label{color:var(--t3);margin-right:2px}
+.dh-meta .dm-val{color:var(--t2);margin-right:4px}
+.dh-meta .dm-div{color:var(--td);margin:0 10px;font-size:12px}
+/* Overview modules */
+.ov-mod{background:#fff;border-radius:var(--r4);border:1px solid #EBEBEB;margin-bottom:16px}
+.ov-mod-h{padding:14px 20px;border-bottom:1px solid var(--bd2);font-size:15px;font-weight:600;color:var(--t1);display:flex;align-items:center;gap:8px}
+.ov-mod-h .om-ico{font-size:16px}
+.ov-mod-b{padding:16px 20px}
+.ov-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 32px}
+.ov-item{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ov-item .oi-label{font-size:12px;color:var(--t3);white-space:nowrap}
+.ov-item .oi-val{font-size:14px;color:var(--t1);word-break:break-all;line-height:1.5}
+/* Log */
+.log{background:#1d2330;color:#a9d1a9;font-family:'Fira Code',Menlo,Consolas,monospace;font-size:12px;line-height:1.8;padding:16px;border-radius:var(--r2);height:400px;overflow-y:auto;white-space:pre-wrap}
+.log .lt{color:#6a8a6a}.log .li{color:#7db8d1}.log .lw{color:#d4a843}.log .le{color:#d16b6b}
+/* Progress */
+.prb{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}.prb .pf{height:100%;background:var(--btn);border-radius:3px;transition:width .3s}
+/* Section card in create */
+.scd{background:#fff;border-radius:var(--r4);border:1px solid #EBEBEB;padding:20px 24px;margin-bottom:16px}
+.scd h4{font-size:14px;font-weight:600;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--bd2)}
+/* Footer */
+.pf2{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--bd2);padding:12px 24px;display:flex;justify-content:space-between;align-items:center;z-index:10}
+/* Toggle */
+.tgl{position:relative;width:36px;height:20px;display:inline-block}
+.tgl input{opacity:0;width:0;height:0}
+.tgl-s{position:absolute;inset:0;background:#ccc;border-radius:10px;cursor:pointer;transition:.2s}
+.tgl-s::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;left:2px;top:2px;transition:.2s}
+.tgl input:checked+.tgl-s{background:var(--btn)}.tgl input:checked+.tgl-s::before{left:18px}
+/* Chart */
+.cht{background:var(--bg2);border:1px dashed var(--bd);border-radius:var(--r2);height:260px;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:13px;position:relative;overflow:hidden}
+.cht canvas{width:100%!important;height:100%!important}
+/* Modal */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+.mo.sh{opacity:1;pointer-events:auto}
+.md{background:#fff;border-radius:var(--r4);box-shadow:var(--sh3);width:480px;max-width:90vw}
+.md-h{padding:16px 20px;border-bottom:1px solid var(--bd2);display:flex;align-items:center;justify-content:space-between}
+.md-h h3{font-size:15px;font-weight:600}
+.md-c{background:none;border:none;font-size:20px;cursor:pointer;color:var(--t3);padding:4px}
+.md-b{padding:20px}.md-f{padding:12px 20px;border-top:1px solid var(--bd2);display:flex;justify-content:flex-end;gap:8px}
+/* Pagination */
+.pgn{display:flex;align-items:center;justify-content:space-between;padding:12px 0;font-size:13px;color:var(--t3)}
+.pgn-info{display:flex;align-items:center;gap:4px}
+.pgn-info b{color:var(--t1);font-weight:600}
+.pgn-ctrl{display:flex;align-items:center;gap:4px}
+.pgn-btn{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--bd);border-radius:var(--r2);background:#fff;color:var(--t2);font-size:13px;cursor:pointer;transition:all .15s;font-family:var(--ff)}
+.pgn-btn:hover{border-color:var(--primary);color:var(--primary)}
+.pgn-btn.on{background:var(--btn);color:#fff;border-color:var(--btn)}
+.pgn-btn:disabled{color:var(--t4);border-color:var(--bd);cursor:not-allowed;background:#fff}
+.pgn-sz{display:flex;align-items:center;gap:6px;margin-left:16px}
+.pgn-sz-sel{height:32px;padding:0 28px 0 10px;border:1px solid var(--bd);border-radius:var(--r2);font-size:13px;font-family:var(--ff);color:var(--t1);background:#fff;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%234C596A' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;transition:all .15s}
+.pgn-sz-sel:hover{border-color:var(--primary)}
+.pgn-sz-sel:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(5,130,255,.08)}
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#d0d3d9;border-radius:3px}
+@media(max-width:900px){.sb{width:56px}.sb-sec-t,.sb-i span{display:none}.sb-i{justify-content:center;padding:12px}.pb{padding:16px}.pg2{grid-template-columns:1fr}.sts{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sb">
+  <div class="sb-logo"><div class="ico">M</div><span>Muses</span></div>
+  <div class="sb-ws">
+    <select class="sb-ws-sel" id="ws-sel">
+      <option value="default" selected>默认空间</option>
+      <option value="nlp">NLP 研发空间</option>
+      <option value="cv">视觉算法空间</option>
+      <option value="rec">推荐系统空间</option>
+    </select>
+  </div>
+  <div class="sb-nav">
+  <div class="sb-sec"><div class="sb-sec-t">应用开发</div>
+    <div class="sb-i"><span class="ic">📱</span><span>应用</span></div>
+    <div class="sb-i"><span class="ic">📋</span><span>应用模板</span></div>
+    <div class="sb-i"><span class="ic">💬</span><span>提示词库</span></div>
+    <div class="sb-i"><span class="ic">📚</span><span>知识库</span></div>
+    <div class="sb-i"><span class="ic">🔧</span><span>工具</span></div>
+  </div>
+  <div class="sb-sec"><div class="sb-sec-t">模型服务</div>
+    <div class="sb-i"><span class="ic">🏪</span><span>模型广场</span></div>
+    <div class="sb-i"><span class="ic">📦</span><span>模型管理</span></div>
+    <div class="sb-i on"><span class="ic">🎯</span><span>模型精调</span></div>
+    <div class="sb-i"><span class="ic">⚡</span><span>批量推理</span></div>
+    <div class="sb-i"><span class="ic">🚀</span><span>模型部署</span></div>
+  </div>
+  <div class="sb-sec"><div class="sb-sec-t">数据管理</div>
+    <div class="sb-i"><span class="ic">📊</span><span>数据集</span></div>
+    <div class="sb-i"><span class="ic">🧹</span><span>数据处理</span></div>
+  </div>
+  <div class="sb-sec"><div class="sb-sec-t">管理中心</div>
+    <div class="sb-i"><span class="ic">⚙️</span><span>空间配置</span></div>
+    <div class="sb-i"><span class="ic">🔑</span><span>API Key</span></div>
+  </div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-user-av">王</div>
+    <div class="sb-user-info"><span class="sb-user-nm">王颖</span><span class="sb-user-id">ying.wang</span></div>
+  </div>
+</aside>
+<div class="mn">
+
+  <!-- LIST -->
+  <div class="pg on" id="pg-list">
+    <div class="pb">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h2 style="font-size:18px;font-weight:600">模型精调</h2>
+        <button class="btn bp" onclick="goCreate()">+ 创建精调作业</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <select class="fs fs-auto" id="f-st"><option value="">全部状态</option><option value="running">训练中</option><option value="completed">已完成</option><option value="failed">失败</option><option value="terminated">已终止</option><option value="pending">待启动</option></select>
+        <select class="fs fs-auto" id="f-me"><option value="">训练方式</option><option value="SFT">SFT</option><option value="DPO">DPO</option></select>
+        <select class="fs fs-auto" id="f-mo"><option value="">基础模型</option><option>Qwen3-8B</option><option>DeepSeek-R1-7B</option><option>Doubao-Pro-32K</option></select>
+        <input class="fi" style="width:200px" placeholder="搜索任务名称 / ID" id="f-se"/>
+      </div>
+      <div class="cd"><div class="tw"><table><thead><tr><th>任务 ID</th><th>任务名称</th><th>基础模型</th><th>训练方式</th><th>训练方法</th><th>状态</th><th>创建人</th><th>创建时间</th><th>操作</th></tr></thead><tbody id="tlb"></tbody></table></div></div>
+      <div class="pgn" id="pgn"></div>
+    </div>
+  </div>
+
+  <!-- CREATE -->
+  <div class="pg" id="pg-create">
+    <div style="display:flex;align-items:center;gap:8px;padding:16px 24px;border-bottom:1px solid var(--bd2);flex-shrink:0">
+      <button class="btn bt" onclick="goList()" style="font-size:18px;padding:4px 8px">←</button>
+      <h2 style="font-size:18px;font-weight:600">创建精调作业</h2>
+    </div>
+    <div class="crt-wrap">
+      <div class="stps" id="c-steps"></div>
+      <div class="crt-body"><div id="c-panel"></div></div>
+      <div class="crt-right" id="c-summary"></div>
+    </div>
+    <div class="crt-foot">
+      <button class="btn bc" id="b-prev" onclick="prevStep()">上一步</button>
+      <button class="btn bc" onclick="goList()">取消</button>
+      <button class="btn bp" id="b-next" onclick="nextStep()">下一步</button>
+    </div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="pg" id="pg-detail">
+    <!-- Top action bar -->
+    <div class="d-bar" id="d-bar">
+      <div class="d-bar-l">
+        <button class="btn bt" onclick="goList()" style="font-size:16px;padding:4px 6px">←</button>
+        <span style="font-size:16px;font-weight:600">精调作业详情</span>
+      </div>
+      <div class="d-bar-r" id="d-bar-btns"></div>
+    </div>
+    <!-- Task info section -->
+    <div class="dh" id="d-header"></div>
+    <div class="pb">
+      <div class="tbs" id="d-tabs">
+        <div class="tb-i on" onclick="swTab('overview')">任务概览</div>
+        <div class="tb-i" onclick="swTab('monitor')">训练监控</div>
+        <div class="tb-i" onclick="swTab('logs')">训练日志</div>
+        <div class="tb-i" onclick="swTab('output')">模型产出</div>
+      </div>
+      <div id="d-panels"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Modal -->
+<div class="mo" id="mo" onclick="event.target===this&&hideM()">
+  <div class="md" onclick="event.stopPropagation()">
+    <div class="md-h"><h3 id="m-tit"></h3><button class="md-c" onclick="hideM()">×</button></div>
+    <div class="md-b" id="m-body"></div>
+    <div class="md-f" id="m-ft"></div>
+  </div>
+</div>
+
+<!-- Canvas for charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+<script>
+// ===== DATA =====
+const T=[
+  {id:'ft-20260507-001',nm:'客服对话微调-V3',model:'Qwen3-8B',method:'SFT',mode:'LoRA',st:'completed',cr:'王颖',tm:'2026-05-07 09:30',dur:'2h 15m',loss:0.032,ep:3,lr:'1e-4',ds:'客服对话训练集',dv:'Version3',gpu:'A100 × 2'},
+  {id:'ft-20260506-002',nm:'代码生成优化-DPO',model:'DeepSeek-R1-7B',method:'DPO',mode:'全量参数',st:'running',cr:'张振宇',tm:'2026-05-06 14:20',dur:'—',loss:0.187,ep:2,lr:'5e-5',ds:'代码偏好数据集',dv:'Version2',gpu:'A100 × 4'},
+  {id:'ft-20260505-003',nm:'商品描述生成-V2',model:'Doubao-Pro-32K',method:'SFT',mode:'LoRA',st:'running',cr:'李程程',tm:'2026-05-05 10:00',dur:'—',loss:0.058,ep:5,lr:'2e-4',ds:'商品描述SFT数据',dv:'Version1',gpu:'A100 × 1'},
+  {id:'ft-20260504-004',nm:'内部知识问答',model:'Qwen3-8B',method:'SFT',mode:'全量参数',st:'failed',cr:'赵旺',tm:'2026-05-04 16:45',dur:'0h 38m',loss:null,ep:3,lr:'1e-4',ds:'知识问答数据集',dv:'Version5',gpu:'A100 × 2'},
+  {id:'ft-20260503-005',nm:'评测指标理解',model:'DeepSeek-R1-7B',method:'SFT',mode:'LoRA',st:'completed',cr:'杨浴亮',tm:'2026-05-03 08:10',dur:'1h 45m',loss:0.045,ep:3,lr:'1e-4',ds:'指标解读训练集',dv:'Version2',gpu:'A100 × 1'},
+  {id:'ft-20260502-006',nm:'广告文案偏好',model:'Doubao-Pro-32K',method:'DPO',mode:'LoRA',st:'terminated',cr:'王颖',tm:'2026-05-02 11:30',dur:'0h 52m',loss:0.312,ep:2,lr:'5e-5',ds:'文案偏好数据',dv:'Version1',gpu:'A100 × 2'},
+  {id:'ft-20260501-007',nm:'摘要生成精调',model:'Qwen3-8B',method:'SFT',mode:'全量参数',st:'pending',cr:'建闯',tm:'2026-05-01 17:00',dur:'—',loss:null,ep:3,lr:'1e-4',ds:'摘要SFT数据',dv:'Version4',gpu:'A100 × 2'},
+  {id:'ft-20260430-008',nm:'多轮对话优化-V2',model:'Qwen3-14B',method:'SFT',mode:'LoRA',st:'completed',cr:'张振宇',tm:'2026-04-30 09:15',dur:'3h 20m',loss:0.041,ep:4,lr:'1e-4',ds:'多轮对话数据集',dv:'Version2',gpu:'A100 × 2'},
+  {id:'ft-20260429-009',nm:'安全对齐-DPO',model:'Qwen3-14B',method:'DPO',mode:'LoRA',st:'completed',cr:'赵旺',tm:'2026-04-29 14:00',dur:'2h 05m',loss:0.068,ep:3,lr:'5e-5',ds:'安全偏好数据集',dv:'Version1',gpu:'A100 × 2'},
+  {id:'ft-20260428-010',nm:'数学推理微调',model:'DeepSeek-R1-7B',method:'SFT',mode:'全量参数',st:'failed',cr:'杨浴亮',tm:'2026-04-28 10:30',dur:'1h 12m',loss:null,ep:5,lr:'5e-5',ds:'数学推理数据集',dv:'Version3',gpu:'A100 × 4'},
+  {id:'ft-20260427-011',nm:'日志分析精调',model:'Doubao-Pro-32K',method:'SFT',mode:'LoRA',st:'running',cr:'李程程',tm:'2026-04-27 08:45',dur:'—',loss:0.092,ep:3,lr:'2e-4',ds:'日志分析SFT数据',dv:'Version1',gpu:'A100 × 1'},
+  {id:'ft-20260426-012',nm:'合同审查微调-V4',model:'Qwen3-8B',method:'SFT',mode:'LoRA',st:'completed',cr:'王颖',tm:'2026-04-26 16:20',dur:'1h 50m',loss:0.037,ep:3,lr:'1e-4',ds:'合同审查训练集',dv:'Version4',gpu:'A100 × 2'},
+  {id:'ft-20260425-013',nm:'代码审查偏好',model:'DeepSeek-R1-32B',method:'DPO',mode:'LoRA',st:'terminated',cr:'建闯',tm:'2026-04-25 11:00',dur:'0h 40m',loss:0.287,ep:2,lr:'5e-5',ds:'代码审查偏好数据',dv:'Version1',gpu:'A100 × 4'},
+  {id:'ft-20260424-014',nm:'简历解析微调',model:'Doubao-Lite-4K',method:'SFT',mode:'LoRA',st:'completed',cr:'张振宇',tm:'2026-04-24 09:30',dur:'0h 55m',loss:0.062,ep:3,lr:'2e-4',ds:'简历解析数据集',dv:'Version2',gpu:'A100 × 1'},
+  {id:'ft-20260423-015',nm:'邮件生成微调',model:'Qwen3-14B',method:'SFT',mode:'LoRA',st:'pending',cr:'赵旺',tm:'2026-04-23 15:10',dur:'—',loss:null,ep:3,lr:'1e-4',ds:'邮件生成训练集',dv:'Version1',gpu:'A100 × 2'},
+  {id:'ft-20260422-016',nm:'表格理解优化',model:'DeepSeek-R1-7B',method:'SFT',mode:'全量参数',st:'completed',cr:'杨浴亮',tm:'2026-04-22 10:00',dur:'4h 10m',loss:0.029,ep:5,lr:'5e-5',ds:'表格理解数据集',dv:'Version3',gpu:'A100 × 4'},
+  {id:'ft-20260421-017',nm:'用户画像生成',model:'Doubao-Pro-32K',method:'SFT',mode:'LoRA',st:'failed',cr:'李程程',tm:'2026-04-21 14:30',dur:'0h 22m',loss:null,ep:3,lr:'1e-4',ds:'用户画像数据集',dv:'Version2',gpu:'A100 × 1'},
+  {id:'ft-20260420-018',nm:'合规审查对齐',model:'Qwen3-8B',method:'DPO',mode:'LoRA',st:'running',cr:'王颖',tm:'2026-04-20 08:00',dur:'—',loss:0.145,ep:3,lr:'5e-5',ds:'合规偏好数据集',dv:'Version1',gpu:'A100 × 2'},
+  {id:'ft-20260419-019',nm:'搜索排序精调-V3',model:'DeepSeek-R1-7B',method:'SFT',mode:'LoRA',st:'completed',cr:'建闯',tm:'2026-04-19 11:45',dur:'2h 30m',loss:0.051,ep:4,lr:'1e-4',ds:'搜索排序训练集',dv:'Version3',gpu:'A100 × 2'},
+  {id:'ft-20260418-020',nm:'报告摘要生成',model:'Qwen3-14B',method:'SFT',mode:'LoRA',st:'pending',cr:'张振宇',tm:'2026-04-18 16:00',dur:'—',loss:null,ep:3,lr:'1e-4',ds:'报告摘要数据集',dv:'Version2',gpu:'A100 × 2'},
+  {id:'ft-20260417-021',nm:'客服情绪识别',model:'Doubao-Lite-4K',method:'SFT',mode:'LoRA',st:'completed',cr:'赵旺',tm:'2026-04-17 09:20',dur:'1h 10m',loss:0.073,ep:3,lr:'2e-4',ds:'情绪识别数据集',dv:'Version1',gpu:'A100 × 1'},
+  {id:'ft-20260416-022',nm:'代码补全偏好-V2',model:'DeepSeek-R1-32B',method:'DPO',mode:'LoRA',st:'terminated',cr:'杨浴亮',tm:'2026-04-16 13:50',dur:'0h 35m',loss:0.351,ep:2,lr:'5e-5',ds:'代码补全偏好数据',dv:'Version2',gpu:'A100 × 4'},
+  {id:'ft-20260415-023',nm:'风控规则微调',model:'Qwen3-8B',method:'SFT',mode:'全量参数',st:'completed',cr:'李程程',tm:'2026-04-15 10:30',dur:'3h 45m',loss:0.025,ep:5,lr:'5e-5',ds:'风控规则数据集',dv:'Version4',gpu:'A100 × 4'},
+];
+const MD=[
+  {nm:'Qwen3-8B',desc:'通义千问3代 8B参数',methods:['SFT','DPO'],modes:['LoRA','全量参数']},
+  {nm:'Qwen3-14B',desc:'通义千问3代 14B参数',methods:['SFT','DPO'],modes:['LoRA','全量参数']},
+  {nm:'DeepSeek-R1-7B',desc:'DeepSeek R1 7B参数',methods:['SFT','DPO'],modes:['LoRA','全量参数']},
+  {nm:'DeepSeek-R1-32B',desc:'DeepSeek R1 32B参数',methods:['SFT','DPO'],modes:['LoRA']},
+  {nm:'Doubao-Pro-32K',desc:'豆包Pro 32K上下文',methods:['SFT'],modes:['LoRA','全量参数']},
+  {nm:'Doubao-Lite-4K',desc:'豆包Lite 4K上下文',methods:['SFT'],modes:['LoRA']},
+];
+const DS=[
+  {nm:'客服对话训练集',type:'SFT',n:12480,vs:['Version1','Version2','Version3'],ow:'王颖'},
+  {nm:'代码偏好数据集',type:'DPO',n:8640,vs:['Version1','Version2'],ow:'张振宇'},
+  {nm:'商品描述SFT数据',type:'SFT',n:5200,vs:['Version1'],ow:'李程程'},
+  {nm:'知识问答数据集',type:'SFT',n:9800,vs:['Version1','Version2','Version3','Version4','Version5'],ow:'赵旺'},
+  {nm:'指标解读训练集',type:'SFT',n:3200,vs:['Version1','Version2'],ow:'杨浴亮'},
+  {nm:'文案偏好数据',type:'DPO',n:6400,vs:['Version1'],ow:'王颖'},
+  {nm:'摘要SFT数据',type:'SFT',n:7100,vs:['Version1','Version2','Version3','Version4'],ow:'建闯'},
+];
+const CK=[
+  {step:200,loss:0.152,tm:'10:12',sz:'1.2 GB',best:false},
+  {step:400,loss:0.089,tm:'10:55',sz:'1.2 GB',best:false},
+  {step:600,loss:0.054,tm:'11:38',sz:'1.2 GB',best:true},
+  {step:800,loss:0.038,tm:'12:20',sz:'1.2 GB',best:false},
+  {step:1000,loss:0.032,tm:'13:02',sz:'1.2 GB',best:false},
+];
+
+const SN=['基本信息','训练配置','训练数据','超参数配置','产出配置','资源确认'];
+let cStep=0, dTask=null;
+
+// Form state
+const F={name:'',desc:'',method:'SFT',model:'',mode:'LoRA',ds:'',dv:'',lr:'1e-4',ep:3,bs:4,msl:2048,wr:0.03,wd:0.01,lrR:8,lrA:16,lrD:0.05,lrT:'q_proj,v_proj',outNm:'',expLim:5,saveInt:200,gpuT:'A100',gpuC:2,autoReg:true,resMode:'public',resPool:'pool-a',gpuModel:'A100'};
+
+// ===== NAV =====
+function showP(id){document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));document.getElementById('pg-'+id).classList.add('on')}
+function goList(){showP('list');pgCur=1;renderList()}
+function goCreate(){cStep=0;showP('create');renderSteps();renderPanel()}
+function goDetail(t){dTask=t;showP('detail');renderDetail(t)}
+
+// ===== LIST & PAGINATION =====
+let pgCur=1, pgSize=10;
+function sTag(s){const m={completed:['tg-ok','已完成'],running:['tg-wr','训练中'],failed:['tg-er','失败'],terminated:['tg-df','已终止'],pending:['tg-if','待启动']};const[c,t]=m[s]||['tg-df',s];return`<span class="tg ${c}">${t}</span>`}
+function mTag(m){return m==='LoRA'?'<span class="tg tg-pu">LoRA</span>':'<span class="tg tg-if">全量参数</span>'}
+function getFiltered(){
+  const fs=document.getElementById('f-st').value,fm=document.getElementById('f-me').value,fmo=document.getElementById('f-mo').value,fs2=document.getElementById('f-se').value.toLowerCase();
+  return T.filter(t=>{if(fs&&t.st!==fs)return false;if(fm&&t.method!==fm)return false;if(fmo&&t.model!==fmo)return false;if(fs2&&!t.nm.toLowerCase().includes(fs2)&&!t.id.includes(fs2))return false;return true});
+}
+function renderList(){
+  const fl=getFiltered();
+  const total=fl.length;
+  const totalPages=Math.max(1,Math.ceil(total/pgSize));
+  if(pgCur>totalPages)pgCur=totalPages;
+  const start=(pgCur-1)*pgSize;
+  const pageData=fl.slice(start,start+pgSize);
+  document.getElementById('tlb').innerHTML=pageData.map(t=>`<tr onclick="goDetail(T.find(x=>x.id==='${t.id}'))"><td style="font-family:monospace;font-size:12px;color:var(--t3)">${t.id}</td><td style="font-weight:500">${t.nm}</td><td>${t.model}</td><td><span class="tg tg-df">${t.method}</span></td><td>${mTag(t.mode)}</td><td>${sTag(t.st)}</td><td>${t.cr}</td><td style="font-size:12px;color:var(--t3)">${t.tm}</td><td onclick="event.stopPropagation()"><button class="btn bt bs" onclick="goDetail(T.find(x=>x.id==='${t.id}'))">详情</button>${t.st==='running'?`<button class="btn bdt bs" onclick="stopTask('${t.id}')">停止</button>`:''}${t.st!=='running'?`<button class="btn bdt bs" onclick="delTask('${t.id}')">删除</button>`:''}</td></tr>`).join('');
+  renderPgn(total,totalPages);
+}
+function renderPgn(total,totalPages){
+  const el=document.getElementById('pgn');
+  if(total===0){el.innerHTML='';return}
+  // page buttons
+  let btns='';
+  const range=2;
+  const pages=[];
+  for(let i=1;i<=totalPages;i++){
+    if(i===1||i===totalPages||Math.abs(i-pgCur)<=range){pages.push(i)}
+    else if(pages[pages.length-1]!=='...'){pages.push('...')}
+  }
+  btns+=`<button class="pgn-btn" onclick="goPage(${pgCur-1})" ${pgCur<=1?'disabled':''}>‹</button>`;
+  pages.forEach(p=>{
+    if(p==='...')btns+=`<span style="padding:0 4px;color:var(--t3)">···</span>`;
+    else btns+=`<button class="pgn-btn ${p===pgCur?'on':''}" onclick="goPage(${p})">${p}</button>`;
+  });
+  btns+=`<button class="pgn-btn" onclick="goPage(${pgCur+1})" ${pgCur>=totalPages?'disabled':''}>›</button>`;
+  el.innerHTML=`<div class="pgn-info">共 <b>${total}</b> 条</div><div style="display:flex;align-items:center"><div class="pgn-ctrl">${btns}</div><div class="pgn-sz"><span>每页</span><select class="pgn-sz-sel" onchange="pgSize=+this.value;pgCur=1;renderList()">${[10,20,50].map(v=>`<option value="${v}" ${pgSize===v?'selected':''}>${v} 条</option>`).join('')}</select></div></div>`;
+}
+function goPage(p){const fl=getFiltered();const tp=Math.max(1,Math.ceil(fl.length/pgSize));if(p<1||p>tp)return;pgCur=p;renderList()}
+document.getElementById('f-st').onchange=function(){pgCur=1;renderList()};
+document.getElementById('f-me').onchange=function(){pgCur=1;renderList()};
+document.getElementById('f-mo').onchange=function(){pgCur=1;renderList()};
+document.getElementById('f-se').oninput=function(){pgCur=1;renderList()};
+
+function stopTask(id){showM('确认停止','<p>确定停止精调作业「'+T.find(x=>x.id===id).nm+'」？停止后已保存的 Checkpoint 仍可使用。</p>',[{t:'取消',c:'bc',a:'hideM()'},{t:'确认停止',c:'bp',a:"hideM();T.find(x=>x.id==='"+id+"').st='terminated';goList()"}])}
+function delTask(id){showM('确认删除','<p>确定删除精调作业「'+T.find(x=>x.id===id).nm+'」？删除后将无法恢复，请谨慎操作。</p>',[{t:'取消',c:'bc',a:'hideM()'},{t:'确认删除',c:'bp',a:"hideM();const i=T.findIndex(x=>x.id==='"+id+"');if(i>=0)T.splice(i,1);goList()"}])}
+
+// ===== CREATE =====
+function renderSteps(){
+  document.getElementById('c-steps').innerHTML=SN.map((n,i)=>{
+    const c=i<cStep?'dn':i===cStep?'on':'';
+    return`<div class="stp ${c}"><div class="stp-n">${i<cStep?'✓':i+1}</div><div class="stp-t">${n}</div></div>${i<SN.length-1?'<div class="stp-l"></div>':''}`;
+  }).join('');
+}
+function renderPanel(){
+  const bp=document.getElementById('b-prev'),bn=document.getElementById('b-next');
+  bp.style.visibility=cStep===0?'hidden':'visible';
+  if(cStep===SN.length-1){bn.textContent='提交作业';bn.onclick=submitTask}else{bn.textContent='下一步';bn.onclick=nextStep}
+  const r=[stepBasic,stepConfig,stepData,stepParams,stepOutput,stepResource];
+  document.getElementById('c-panel').innerHTML=r[cStep]();
+  renderSummary();
+}
+function renderSummary(){
+  const v=k=>F[k]||'';
+  const sv=(val)=>val?`<span class="sum-val">${val}</span>`:`<span class="sum-val empty">—</span>`;
+  const isPrivate=F.resMode==='private';
+  document.getElementById('c-summary').innerHTML=`<h4>配置摘要</h4>`+
+    `<div class="sum-row"><span class="sum-label">任务名称</span>${sv(v('name'))}</div>`+
+    `<div class="sum-row"><span class="sum-label">训练方式</span>${sv(F.method+' · '+F.mode)}</div>`+
+    `<div class="sum-row"><span class="sum-label">基础模型</span>${sv(v('model'))}</div>`+
+    `<div class="sum-row"><span class="sum-label">训练数据</span>${sv(F.ds?(F.ds+' > '+F.dv):'')}</div>`+
+    `<div class="sum-row"><span class="sum-label">学习率</span>${sv(v('lr'))}</div>`+
+    `<div class="sum-row"><span class="sum-label">Epochs</span>${sv(F.ep||'')}</div>`+
+    `<div class="sum-row"><span class="sum-label">Batch Size</span>${sv(F.bs||'')}</div>`+
+    (F.mode==='LoRA'?`<div class="sum-row"><span class="sum-label">LoRA Rank</span>${sv(F.lrR||'')}</div><div class="sum-row"><span class="sum-label">LoRA Alpha</span>${sv(F.lrA||'')}</div>`:'')+
+    (F.autoReg!==false?`<div class="sum-row"><span class="sum-label">产出模型</span>${sv(v('outNm'))}</div>`:'')+
+    `<div class="sum-row"><span class="sum-label">保存间隔</span>${sv(F.saveInt?'每 '+F.saveInt+' 步':'')}</div>`+
+    `<div class="sum-row"><span class="sum-label">导出上限</span>${sv(F.expLim||'')}</div>`+
+    `<div class="sum-row"><span class="sum-label">资源模型</span>${sv(isPrivate?'独立资源 ('+F.gpuModel+' × '+F.gpuC+'卡)':'公共资源')}</div>`;
+}
+let stepErrors=[];
+function nextStep(){
+  if(!validateStep())return;
+  if(cStep<SN.length-1){cStep++;stepErrors=[];renderSteps();renderPanel()}
+}
+function prevStep(){if(cStep>0){cStep--;stepErrors=[];renderSteps();renderPanel()}}
+function validateStep(){
+  stepErrors=[];
+  if(cStep===0){if(!F.name)stepErrors.push('name');if(!F.desc)stepErrors.push('desc')}
+  else if(cStep===1){if(!F.model)stepErrors.push('model')}
+  else if(cStep===2){if(!F.ds)stepErrors.push('ds');if(!F.dv)stepErrors.push('dv')}
+  else if(cStep===3){/* params have defaults, no required check needed */}
+  else if(cStep===4){if(F.autoReg!==false&&!F.outNm)stepErrors.push('outNm')}
+  else if(cStep===5){if(F.resMode==='private'){if(!F.resPool)stepErrors.push('resPool');if(!F.gpuModel)stepErrors.push('gpuModel');if(!F.gpuC)stepErrors.push('gpuC')}}
+  if(stepErrors.length>0){renderPanel();return false}
+  return true;
+}
+function hasErr(key){return stepErrors.includes(key)}
+function errTip(key,msg){return hasErr(key)?`<div class="fe" style="display:block">${msg}</div>`:''}
+function errCls(key){return hasErr(key)?' err':''}
+function submitTask(){
+  if(!validateStep()){showM('提示','<p style="color:var(--warn)">请完善必填信息后再提交</p>',[{t:'知道了',c:'bp',a:'hideM()'}]);return}
+  const nt={id:'ft-'+Date.now().toString().slice(-10),nm:F.name,model:F.model,method:F.method,mode:F.mode,st:'pending',cr:'王颖',tm:new Date().toLocaleString('zh-CN'),dur:'—',loss:null,ep:F.ep,lr:F.lr,ds:F.ds,dv:F.dv,gpu:F.resMode==='private'?F.gpuModel+' × '+F.gpuC:'公共资源'};
+  T.unshift(nt);showM('提交成功',`<p>精调作业「${F.name}」已创建成功，任务即将开始训练。</p>`,[{t:'查看详情',c:'bc',a:"hideM();goDetail(T[0])"},{t:'返回列表',c:'bp',a:"hideM();goList()"}]);
+}
+
+// Step renderers
+function stepBasic(){
+  return`<h4>基本信息</h4><div class="fg"><label class="fl">任务名称<span class="rq">*</span></label><input class="fi${errCls('name')}" placeholder="请输入精调任务名称，支持英文、数字、中划线" maxlength="50" value="${F.name}" oninput="F.name=this.value;stepErrors=stepErrors.filter(e=>e!=='name');renderSummary()"/>${errTip('name','请输入任务名称')}</div><div class="fg"><label class="fl">任务描述<span class="rq">*</span></label><textarea class="fta${errCls('desc')}" placeholder="请输入任务描述，最多200字" maxlength="200" oninput="F.desc=this.value;stepErrors=stepErrors.filter(e=>e!=='desc');renderSummary()">${F.desc}</textarea>${errTip('desc','请输入任务描述')}</div>`;
+}
+function stepConfig(){
+  const modelErr=hasErr('model');
+  return`<h4>训练配置</h4><div class="fg"><label class="fl">训练方式<span class="rq">*</span></label><div class="rg"><label class="ri"><input type="radio" name="method" value="SFT" ${F.method==='SFT'?'checked':''} onchange="F.method=this.value;F.model='';renderPanel()"/> SFT（有监督微调）</label><label class="ri"><input type="radio" name="method" value="DPO" ${F.method==='DPO'?'checked':''} onchange="F.method=this.value;F.model='';renderPanel()"/> DPO（直接偏好优化）</label></div><div class="fh">SFT 适用于指令跟随、风格迁移等场景；DPO 适用于偏好对齐、安全对齐等场景</div></div><div class="fg"><label class="fl">基础模型<span class="rq">*</span></label>${modelErr?'<div class="fe" style="display:block;margin-bottom:8px">请选择基础模型</div>':''}<div class="scs">${MD.filter(m=>m.methods.includes(F.method)).map(m=>`<div class="sc ${F.model===m.nm?'on':''} ${modelErr?'err':''}" style="${modelErr&&!F.model?'border-color:var(--err)':''}" onclick="F.model='${m.nm}';F.mode='LoRA';stepErrors=stepErrors.filter(e=>e!=='model');renderPanel()"><div class="ct">${m.nm}</div><div class="cd2">${m.desc}</div></div>`).join('')}</div></div>${F.model?`<div class="fg"><label class="fl">训练方法<span class="rq">*</span></label><div class="rg">${MD.find(m=>m.nm===F.model).modes.map(m=>`<label class="ri"><input type="radio" name="mode" value="${m}" ${F.mode===m?'checked':''} onchange="F.mode=this.value;renderPanel()"/> ${m}</label>`).join('')}</div><div class="fh">LoRA 仅训练低秩适配层，速度快、资源消耗低；全量参数微调整体效果更优但资源消耗大</div></div>`:''}`;
+}
+function stepData(){
+  const fl=DS.filter(d=>d.type===F.method);
+  const selDs=F.ds?DS.find(d=>d.nm===F.ds):null;
+  const versions=selDs?selDs.vs:[];
+  // Generate 10 preview rows
+  let previewHtml='';
+  if(F.ds&&F.dv){
+    const pData=F.method==='SFT'?[
+      {prompt:'请总结以下文章',user:'随着AI技术的快速发展，大语言模型在各行各业的应用越来越广泛...',assistant:'本文主要讨论了大语言模型在行业中的应用现状及发展趋势'},
+      {prompt:'翻译为英文',user:'今天天气很好，适合出去散步',assistant:'The weather is nice today, suitable for a walk'},
+      {prompt:'分类以下文本',user:'这款手机的电池续航能力非常出色',assistant:'科技/产品评测'},
+      {prompt:'生成标题',user:'本文介绍了如何使用Python进行数据分析，包括pandas和numpy的使用技巧',assistant:'Python数据分析入门指南'},
+      {prompt:'改写句子',user:'这个方案不太好，需要改进',assistant:'该方案仍有优化空间，建议进一步完善'},
+      {prompt:'提取关键词',user:'深度学习是机器学习的一个分支，基于人工神经网络进行特征学习',assistant:'深度学习, 机器学习, 神经网络, 特征学习'},
+      {prompt:'问答',user:'什么是LoRA微调？',assistant:'LoRA（Low-Rank Adaptation）是一种参数高效微调方法，通过在预训练模型的权重矩阵上添加低秩分解矩阵来减少训练参数量'},
+      {prompt:'情感分析',user:'服务态度太差了，再也不来了',assistant:'负面'},
+      {prompt:'续写',user:'在人工智能领域，Transformer架构的出现',assistant:'在人工智能领域，Transformer架构的出现彻底改变了自然语言处理的格局，使得大规模预训练模型成为可能'},
+      {prompt:'摘要生成',user:'近日，某科技公司发布了一款新型AI芯片，据称其推理速度比上一代提升了3倍，功耗降低了40%。该芯片采用了最新的3nm工艺制程，集成了超过500亿个晶体管，支持主流的深度学习框架。',assistant:'某科技公司发布新款AI芯片，推理速度提升3倍、功耗降低40%，采用3nm工艺、超500亿晶体管'}
+    ]:[
+      {prompt:'哪个回答更好？',user:'解释量子计算',chosen:'量子计算利用量子叠加和纠缠等特性进行信息处理...',rejected:'量子计算就是很快的电脑'},
+      {prompt:'哪个回答更好？',user:'如何学习编程',chosen:'建议从Python入门，配合项目实践逐步提升...',rejected:'编程很简单，随便学学就会'},
+      {prompt:'哪个回答更好？',user:'什么是区块链',chosen:'区块链是一种去中心化的分布式账本技术...',rejected:'区块链就是比特币'},
+      {prompt:'哪个回答更好？',user:'推荐一本好书',chosen:'推荐《人类简史》，从宏观视角梳理人类文明发展...',rejected:'随便一本都行'},
+      {prompt:'哪个回答更好？',user:'如何提高英语口语',chosen:'多进行沉浸式练习，比如跟读、shadowing、与母语者交流...',rejected:'多背单词就行了'},
+      {prompt:'哪个回答更好？',user:'解释机器学习',chosen:'机器学习是AI的子领域，通过数据驱动让系统自动改进性能...',rejected:'机器学习就是让电脑自己学'},
+      {prompt:'哪个回答更好？',user:'如何保持健康',chosen:'均衡饮食、规律运动、充足睡眠是三大基石...',rejected:'少吃多运动'},
+      {prompt:'哪个回答更好？',user:'什么是云原生',chosen:'云原生是一套构建和运行应用的方法论，包含容器、微服务、DevOps等...',rejected:'云原生就是上云'},
+      {prompt:'哪个回答更好？',user:'怎样写好代码',chosen:'注重可读性、遵循设计模式、写好测试、持续重构...',rejected:'能跑就行'},
+      {prompt:'哪个回答更好？',user:'什么是API',chosen:'API是应用程序编程接口，定义了软件组件间交互的协议和工具...',rejected:'API就是个网址'}
+    ];
+    previewHtml=`<div class="fg"><label class="fl">数据预览（前 10 条）</label><div style="border:1px solid var(--bd);border-radius:var(--r2);overflow:hidden"><table style="font-size:12px"><thead><tr>${F.method==='SFT'?'<th style="padding:8px 12px;width:200px">Prompt</th><th style="padding:8px 12px;width:200px">User</th><th style="padding:8px 12px">Assistant</th>':'<th style="padding:8px 12px;width:160px">Prompt</th><th style="padding:8px 12px;width:160px">User</th><th style="padding:8px 12px;width:200px">Chosen</th><th style="padding:8px 12px">Rejected</th>'}</tr></thead><tbody>${pData.map(r=>`<tr>${F.method==='SFT'?`<td style="padding:6px 12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.prompt}</td><td style="padding:6px 12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.user}</td><td style="padding:6px 12px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.assistant}</td>`:`<td style="padding:6px 12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.prompt}</td><td style="padding:6px 12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.user}</td><td style="padding:6px 12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.chosen}</td><td style="padding:6px 12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.rejected}</td>`}</tr>`).join('')}</tbody></table></div><div class="fh">仅展示前 10 条数据，完整数据请在数据集管理中查看</div></div>`;
+  }
+  return`<h4>训练数据</h4><div class="fg"><label class="fl">训练数据集<span class="rq">*</span></label><select class="fs${errCls('ds')}" id="ds-sel" onchange="F.ds=this.value;F.dv='';stepErrors=stepErrors.filter(e=>e!=='ds');renderPanel()"><option value="">请选择数据集</option>${fl.map(d=>`<option value="${d.nm}" ${F.ds===d.nm?'selected':''}>${d.nm} (${d.type} · ${d.n.toLocaleString()}条 · ${d.ow})</option>`).join('')}</select>${errTip('ds','请选择训练数据集')}${fl.length===0?'<div class="fh" style="color:var(--warn)">当前训练方式暂无可用数据集</div>':''}</div>${F.ds?`<div class="fg"><label class="fl">数据集版本<span class="rq">*</span></label><select class="fs fs-auto${errCls('dv')}" onchange="F.dv=this.value;stepErrors=stepErrors.filter(e=>e!=='dv');renderPanel()"><option value="">请选择版本</option>${versions.map(v=>`<option value="${v}" ${F.dv===v?'selected':''}>${v}</option>`).join('')}</select>${errTip('dv','请选择数据集版本')}<div class="fh">仅可使用已发布的数据集版本进行训练</div></div>`:''}${F.ds&&F.dv?previewHtml:''}`;
+}
+function stepParams(){
+  const isLora=F.mode==='LoRA';
+  return`<h4>超参数配置</h4><div class="pg2"><div class="fg"><label class="fl">学习率 (Learning Rate)<span class="rq">*</span></label><select class="fs" onchange="F.lr=this.value">${['1e-5','5e-5','1e-4','2e-4','5e-4'].map(v=>`<option value="${v}" ${F.lr===v?'selected':''}>${v}</option>`).join('')}</select><div class="fh">推荐值：LoRA 1e-4~2e-4，全量参数 5e-5~1e-4</div></div><div class="fg"><label class="fl">训练轮数 (Epochs)<span class="rq">*</span></label><input class="fi" type="number" min="1" max="50" value="${F.ep}" onchange="F.ep=+this.value"/><div class="fh">通常 3~5 轮即可收敛，过多可能过拟合</div></div><div class="fg"><label class="fl">批次大小 (Batch Size)</label><input class="fi" type="number" min="1" max="128" value="${F.bs}" onchange="F.bs=+this.value"/><div class="fh">受 GPU 显存限制，值越大显存占用越高</div></div><div class="fg"><label class="fl">最大序列长度</label><select class="fs" onchange="F.msl=+this.value">${[512,1024,2048,4096,8192].map(v=>`<option value="${v}" ${F.msl===v?'selected':''}>${v}</option>`).join('')}</select></div><div class="fg"><label class="fl">Warmup 比例</label><input class="fi" type="number" min="0" max="0.5" step="0.01" value="${F.wr}" onchange="F.wr=+this.value"/></div><div class="fg"><label class="fl">权重衰减 (Weight Decay)</label><input class="fi" type="number" min="0" max="0.1" step="0.01" value="${F.wd}" onchange="F.wd=+this.value"/></div></div>${isLora?`<div style="margin-top:8px"><h4 style="font-size:14px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bd2)">LoRA 专属参数</h4><div class="pg2"><div class="fg"><label class="fl">LoRA Rank (r)</label><select class="fs" onchange="F.lrR=+this.value">${[4,8,16,32,64].map(v=>`<option value="${v}" ${F.lrR===v?'selected':''}>${v}</option>`).join('')}</select><div class="fh">秩越高可学习参数越多，但显存占用也越高</div></div><div class="fg"><label class="fl">LoRA Alpha</label><input class="fi" type="number" min="1" max="128" value="${F.lrA}" onchange="F.lrA=+this.value"/><div class="fh">通常设置为 Rank 的 2 倍</div></div><div class="fg"><label class="fl">LoRA Dropout</label><input class="fi" type="number" min="0" max="0.5" step="0.01" value="${F.lrD}" onchange="F.lrD=+this.value"/></div><div class="fg"><label class="fl">目标模块</label><input class="fi" value="${F.lrT}" maxlength="100" oninput="F.lrT=this.value"/><div class="fh">逗号分隔，常见：q_proj,v_proj,k_proj,o_proj</div></div></div></div>`:''}`;
+}
+function stepOutput(){
+  const autoReg=F.autoReg!==false;
+  return`<h4>产出配置</h4><div class="fg"><label class="fl">自动注册到模型管理</label><div style="display:flex;align-items:center;gap:8px"><label class="tgl"><input type="checkbox" ${autoReg?'checked':''} onchange="F.autoReg=this.checked;renderPanel()"/><span class="tgl-s"></span></label><span style="font-size:13px;color:var(--t2)">训练完成后自动将最优 Checkpoint 注册为自定义模型</span></div></div>${autoReg?`<div class="fg"><label class="fl">模型名称<span class="rq">*</span></label><input class="fi${errCls('outNm')}" placeholder="请输入产出模型名称，支持英文、数字、中划线" maxlength="50" value="${F.outNm}" oninput="F.outNm=this.value;stepErrors=stepErrors.filter(e=>e!=='outNm');renderSummary()"/><div class="fh">精调产出的模型在模型管理中显示的名称</div>${errTip('outNm','请输入产出模型名称')}</div><div style="background:var(--primary-light);border-radius:var(--r2);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:8px;font-size:13px"><span style="font-size:16px">💡</span>精调完成后，模型将自动保存到模型管理中，您也可以手动选择最优 Checkpoint 进行注册</div>`:''}<div class="pg2"><div class="fg"><label class="fl">导出上限</label><input class="fi" type="number" min="1" max="20" value="${F.expLim}" onchange="F.expLim=+this.value"/><div class="fh">最多保存的 Checkpoint 数量，超过时自动删除最旧的</div></div><div class="fg"><label class="fl">保存间隔 (Steps)</label><input class="fi" type="number" min="50" max="5000" step="50" value="${F.saveInt}" onchange="F.saveInt=+this.value"/><div class="fh">每隔多少步保存一次 Checkpoint</div></div></div>`;
+}
+function stepResource(){
+  const resMode=F.resMode||'public';
+  const isPrivate=resMode==='private';
+  const gpuModels=F.gpuModel||'A100';
+  const gpuPrices={A100:12.8,A800:11.5,H100:18.6};
+  const price=gpuPrices[gpuModels]||12.8;
+  const est=isPrivate?price*F.gpuC*F.ep*0.5:0;
+  let resHtml='';
+  if(isPrivate){
+    resHtml=`<div class="pg2" style="margin-top:16px"><div class="fg"><label class="fl">资源池<span class="rq">*</span></label><select class="fs${errCls('resPool')}" onchange="F.resPool=this.value;stepErrors=stepErrors.filter(e=>e!=='resPool');renderPanel()"><option value="pool-a" ${F.resPool==='pool-a'||!F.resPool?'selected':''}>资源池 A（A100 为主）</option><option value="pool-b" ${F.resPool==='pool-b'?'selected':''}>资源池 B（A800 为主）</option><option value="pool-c" ${F.resPool==='pool-c'?'selected':''}>资源池 C（H100 为主）</option></select>${errTip('resPool','请选择资源池')}</div><div class="fg"><label class="fl">GPU 型号<span class="rq">*</span></label><select class="fs${errCls('gpuModel')}" onchange="F.gpuModel=this.value;F.gpuT=this.value;stepErrors=stepErrors.filter(e=>e!=='gpuModel');renderPanel()">${Object.entries(gpuPrices).map(([k,v])=>`<option value="${k}" ${gpuModels===k?'selected':''}>${k} (¥${v}/卡/小时)</option>`).join('')}</select>${errTip('gpuModel','请选择 GPU 型号')}</div><div class="fg"><label class="fl">GPU 数量<span class="rq">*</span></label><select class="fs${errCls('gpuC')}" onchange="F.gpuC=+this.value;stepErrors=stepErrors.filter(e=>e!=='gpuC');renderPanel()">${[1,2,4,8].map(v=>`<option value="${v}" ${F.gpuC===v?'selected':''}>${v} 卡</option>`).join('')}</select>${errTip('gpuC','请选择 GPU 数量')}</div><div class="fg"></div></div><div style="background:var(--bg2);border-radius:var(--r3);padding:20px;margin-top:8px"><h4 style="font-size:14px;font-weight:600;margin-bottom:16px">费用预估</h4><div class="ig"><div class="ii"><span class="il">GPU 规格</span><span class="iv">${gpuModels}</span></div><div class="ii"><span class="il">GPU 数量</span><span class="iv">${F.gpuC} 卡</span></div><div class="ii"><span class="il">单价</span><span class="iv">¥${price}/卡/小时</span></div><div class="ii"><span class="il">预估时长</span><span class="iv">约 ${F.ep}×0.5 = ${(F.ep*0.5).toFixed(1)} 小时</span></div><div class="ii"><span class="il" style="font-weight:600;color:var(--t1)">预估总费用</span><span class="iv" style="font-size:18px;font-weight:700;color:var(--warn)">¥${est.toFixed(1)}</span></div></div><div class="fh" style="margin-top:12px">* 实际费用以训练结束时为准，预估基于历史同类任务数据</div></div>`;
+  }else{
+    resHtml=`<div style="background:var(--bg3);border-radius:var(--r2);padding:20px;margin-top:16px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--t2)"><span style="font-size:18px">🌐</span><span>选择公共资源后，系统将自动分配可用 GPU 资源，无需手动配置</span></div>`;
+  }
+  return`<h4>资源配置</h4><div class="fg"><label class="fl">资源模型<span class="rq">*</span></label><div class="rg"><label class="ri"><input type="radio" name="resMode" value="public" ${resMode==='public'?'checked':''} onchange="F.resMode='public';renderPanel()"/> 公共资源</label><label class="ri"><input type="radio" name="resMode" value="private" ${resMode==='private'?'checked':''} onchange="F.resMode='private';renderPanel()"/> 独立资源</label></div><div class="fh">公共资源由平台统一调度，按需分配；独立资源需指定资源池和 GPU 规格，适合对资源有明确要求的场景</div></div>${resHtml}`;
+}
+
+// ===== DETAIL =====
+function renderDetail(t){
+  document.getElementById('d-bar-btns').innerHTML=`
+    <button class="btn bp" style="font-size:13px;padding:5px 16px">终止训练</button>
+    <button class="btn bt bs" style="font-size:13px;padding:5px 16px" disabled>重新训练</button>
+    <button class="btn bt" style="font-size:13px;padding:5px 16px">更多</button>`;
+  document.getElementById('d-header').innerHTML=`
+    <div class="dh-ico">🎯</div>
+    <div class="dh-info">
+      <div class="dh-row1">
+        <span class="dh-nm">${t.nm}</span>
+        ${sTag(t.st)}
+      </div>
+      <div class="dh-meta">
+        <span class="dm-label">ID:</span><span class="dm-val" style="font-family:monospace">${t.id}</span>
+        <span class="dm-div">|</span>
+        <span class="dm-label">创建人:</span><span class="dm-val">${t.cr}</span>
+        <span class="dm-div">|</span>
+        <span class="dm-label">创建时间:</span><span class="dm-val">${t.tm}</span>
+        <span class="dm-div">|</span>
+        <span class="dm-label">描述:</span><span class="dm-val">${t.nm} - ${t.method} ${t.mode} 精调任务</span>
+      </div>
+    </div>`;
+  swTab('overview');
+}
+function ovItem(label,val){return`<div class="ov-item"><span class="oi-label">${label}</span><span class="oi-val">${val||'—'}</span></div>`}
+function swTab(tab){
+  document.querySelectorAll('#d-tabs .tb-i').forEach(e=>e.classList.toggle('on',e.textContent==={overview:'任务概览',monitor:'训练监控',logs:'训练日志',output:'模型产出'}[tab]));
+  const t=dTask;
+  const panels={
+    overview:`
+      <div class="ov-mod"><div class="ov-mod-h"><span class="om-ico">🔧</span>训练配置</div><div class="ov-mod-b"><div class="ov-grid">
+        ${ovItem('基础模型',t.model)}
+        ${ovItem('训练方式',t.method)}
+        ${ovItem('训练方法',t.mode)}
+      </div></div></div>
+      <div class="ov-mod"><div class="ov-mod-h"><span class="om-ico">📊</span>数据配置</div><div class="ov-mod-b"><div class="ov-grid">
+        ${ovItem('训练数据集',t.ds)}
+        ${ovItem('数据集版本',t.dv)}
+        ${ovItem('训练时长',t.dur)}
+      </div></div></div>
+      <div class="ov-mod"><div class="ov-mod-h"><span class="om-ico">⚙️</span>参数配置</div><div class="ov-mod-b"><div class="ov-grid">
+        ${ovItem('学习率',t.lr)}
+        ${ovItem('训练轮数 (Epochs)',t.ep)}
+        ${ovItem('批次大小 (Batch Size)','—')}
+        ${ovItem('最大序列长度','—')}
+        ${ovItem('Warmup 比例','—')}
+        ${ovItem('权重衰减','—')}
+      </div></div></div>
+      <div class="ov-mod"><div class="ov-mod-h"><span class="om-ico">🖥️</span>资源配置</div><div class="ov-mod-b"><div class="ov-grid">
+        ${ovItem('GPU 资源',t.gpu)}
+        ${ovItem('资源模型','公共资源')}
+        ${ovItem('最终 Loss',t.loss||'—')}
+      </div></div></div>`,
+    monitor:`<div class="cd" style="margin-bottom:16px"><div class="cd-h"><h3>训练 Loss 曲线</h3></div><div class="cd-b"><div class="cht"><canvas id="lossChart"></canvas></div></div></div><div class="cd"><div class="cd-h"><h3>学习率曲线</h3></div><div class="cd-b"><div class="cht"><canvas id="lrChart"></canvas></div></div></div>`,
+    logs:`<div class="cd"><div class="cd-h"><h3>训练日志</h3><div style="display:flex;gap:8px"><button class="btn bt bs" onclick="refreshLogs()">🔄 刷新</button></div></div><div class="cd-b"><div class="log" id="logBox"></div></div></div>`,
+    output:`<div class="cd"><div class="cd-h"><h3>Checkpoint 列表</h3></div><div class="cd-b"><div class="tw"><table><thead><tr><th>Step</th><th>Loss</th><th>保存时间</th><th>大小</th><th>标记</th><th>操作</th></tr></thead><tbody>${CK.map(c=>`<tr><td>${c.step}</td><td>${c.loss}</td><td>${t.tm.split(' ')[0]} ${c.tm}</td><td>${c.sz}</td><td>${c.best?'<span class="tg tg-ok">最优</span>':'—'}</td><td><button class="btn bt bs">注册模型</button><button class="btn bt bs" style="margin-left:4px">部署</button></td></tr>`).join('')}</tbody></table></div></div></div>`
+  };
+  document.getElementById('d-panels').innerHTML=panels[tab];
+  if(tab==='monitor')setTimeout(drawCharts,50);
+  if(tab==='logs')setTimeout(fillLogs,50);
+}
+
+// Charts
+function drawCharts(){
+  if(typeof Chart==='undefined')return;
+  const steps=CK.map(c=>c.step),losses=CK.map(c=>c.loss);
+  const lrs=steps.map((_,i)=>{const v=parseFloat(F.lr);return i<2?v*(i+1)/2:i>steps.length-2?v*0.1:v});
+  const ctx1=document.getElementById('lossChart');
+  const ctx2=document.getElementById('lrChart');
+  if(ctx1)new Chart(ctx1,{type:'line',data:{labels:steps,datasets:[{label:'Loss',data:losses,borderColor:'#0057FF',backgroundColor:'rgba(0,87,255,0.1)',fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'#0057FF'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'Step'}},y:{title:{display:true,text:'Loss'}}}}});
+  if(ctx2)new Chart(ctx2,{type:'line',data:{labels:steps,datasets:[{label:'Learning Rate',data:lrs,borderColor:'#478BFF',backgroundColor:'rgba(71,139,255,0.1)',fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'#478BFF'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'Step'}},y:{title:{display:true,text:'LR'}}}}});
+}
+
+// Logs
+function fillLogs(){
+  const box=document.getElementById('logBox');
+  if(!box)return;
+  const lines=[
+    {t:'09:30:01',l:'li',m:'[INFO] 任务初始化完成，任务ID: ft-20260507-001'},
+    {t:'09:30:02',l:'li',m:'[INFO] 基础模型加载: Qwen3-8B'},
+    {t:'09:30:05',l:'li',m:'[INFO] 训练数据集加载: 客服对话训练集 > Version3 (12480 条)'},
+    {t:'09:30:08',l:'li',m:'[INFO] LoRA 适配器初始化: rank=8, alpha=16, targets=q_proj,v_proj'},
+    {t:'09:30:10',l:'li',m:'[INFO] GPU 分配: A100 × 2, 显存 80GB × 2'},
+    {t:'09:30:12',l:'lw',m:'[WARN] 数据集存在 23 条格式异常数据，已自动跳过'},
+    {t:'09:30:15',l:'li',m:'[INFO] 开始训练: epochs=3, lr=1e-4, batch_size=4'},
+    {t:'09:31:20',l:'li',m:'[INFO] Epoch 1/3 - Step 100/1560 - Loss: 0.412 - Speed: 3.2 samples/s'},
+    {t:'09:45:30',l:'li',m:'[INFO] Epoch 1/3 - Step 200/1560 - Loss: 0.152 - Speed: 3.4 samples/s'},
+    {t:'09:45:31',l:'li',m:'[INFO] ✓ Checkpoint 已保存: step=200, loss=0.152'},
+    {t:'10:15:00',l:'li',m:'[INFO] Epoch 1/3 - Step 400/1560 - Loss: 0.089'},
+    {t:'10:15:01',l:'li',m:'[INFO] ✓ Checkpoint 已保存: step=400, loss=0.089'},
+    {t:'10:55:00',l:'li',m:'[INFO] Epoch 1/3 - Step 600/1560 - Loss: 0.054 ★ 最优'},
+    {t:'10:55:01',l:'li',m:'[INFO] ✓ Checkpoint 已保存: step=600, loss=0.054 (best)'},
+    {t:'11:38:00',l:'li',m:'[INFO] Epoch 2/3 - Step 800/1560 - Loss: 0.038'},
+    {t:'11:38:01',l:'li',m:'[INFO] ✓ Checkpoint 已保存: step=800, loss=0.038'},
+    {t:'12:20:00',l:'li',m:'[INFO] Epoch 2/3 - Step 1000/1560 - Loss: 0.032'},
+    {t:'12:20:01',l:'li',m:'[INFO] ✓ Checkpoint 已保存: step=1000, loss=0.032'},
+    {t:'13:02:00',l:'li',m:'[INFO] Epoch 3/3 - Step 1560/1560 - Loss: 0.028'},
+    {t:'13:02:01',l:'li',m:'[INFO] ========== 训练完成 =========='},
+    {t:'13:02:02',l:'li',m:'[INFO] 最终 Loss: 0.028 | 最优 Checkpoint: step=1000, loss=0.032'},
+    {t:'13:02:03',l:'li',m:'[INFO] 模型已自动注册到模型管理: 客服对话微调-V3'},
+    {t:'13:02:05',l:'li',m:'[INFO] 任务状态变更为: 已完成'},
+  ];
+  box.innerHTML=lines.map(l=>`<span class="lt">${l.t}</span> <span class="${l.l}">${l.m}</span>`).join('\n');
+}
+function refreshLogs(){fillLogs();document.getElementById('logBox').scrollTop=99999}
+
+// ===== MODAL =====
+function showM(title,body,btns){
+  document.getElementById('m-tit').textContent=title;
+  document.getElementById('m-body').innerHTML=body;
+  document.getElementById('m-ft').innerHTML=btns.map(b=>`<button class="btn ${b.c}" onclick="${b.a}">${b.t}</button>`).join('');
+  document.getElementById('mo').classList.add('sh');
+}
+function hideM(){document.getElementById('mo').classList.remove('sh')}
+
+// Init
+renderList();
+</script>
+</body>
+</html>
