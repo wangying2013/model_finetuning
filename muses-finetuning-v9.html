@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>模型精调 - Muses 平台</title>
+<title>模型调优 - Muses 平台</title>
 <style>
 :root{--primary:#0057FF;--primary-hover:#004AD9;--primary-pressed:#003DB3;--primary-light:#E5EEFF;--primary-lighter:rgba(0,87,255,0.08);--btn:#0057FF;--btn-h:#004AD9;--btn-a:#003DB3;--btn-d:rgba(0,87,255,0.3);--ok:#35A04F;--ok-bg:#EAF8ED;--err:#FF3B30;--err-bg:#FFEBEA;--warn:#FF9500;--warn-bg:#FFF4E5;--info:#0057FF;--info-bg:#E5EEFF;--pur:#9246E0;--pur-bg:rgba(146,70,224,.1);--t1:#0A1B33;--t2:#4C596A;--t3:rgba(0,0,0,.35);--t4:#BFBFBF;--td:#D9D9D9;--bg:#fff;--bg2:#F3F4F6;--bg3:#F9FAFB;--bd:#D9D9D9;--bd2:rgba(0,0,0,.08);--sh1:0 0 0 1px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);--sh2:0px 2px 4px 0px rgba(0,0,0,.14),0px 0px 1px 0px rgba(0,0,0,.16);--sh3:0px 0px 1px 0px rgba(0,0,0,.3),0px 4px 14px 0px rgba(0,0,0,.1);--r1:4px;--r2:4px;--r3:8px;--rp:100px;--ff:"PingFang SC","PingFang TC","PingFang HK",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Helvetica,Arial,sans-serif}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -215,7 +215,7 @@ tbody tr:hover{background:var(--bg3)}tbody tr{cursor:pointer}
   <div class="sb-sec"><div class="sb-sec-t">模型服务</div>
     <div class="sb-i"><span class="ic">🏪</span><span>模型广场</span></div>
     <div class="sb-i"><span class="ic">📦</span><span>模型管理</span></div>
-    <div class="sb-i on"><span class="ic">🎯</span><span>模型精调</span></div>
+    <div class="sb-i on"><span class="ic">🎯</span><span>模型调优</span></div>
     <div class="sb-i"><span class="ic">⚡</span><span>批量推理</span></div>
     <div class="sb-i"><span class="ic">🚀</span><span>模型部署</span></div>
   </div>
@@ -239,8 +239,8 @@ tbody tr:hover{background:var(--bg3)}tbody tr{cursor:pointer}
   <div class="pg on" id="pg-list">
     <div class="pb">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <h2 style="font-size:18px;font-weight:600">模型精调</h2>
-        <button class="btn bp" onclick="goCreate()">+ 创建精调作业</button>
+        <h2 style="font-size:18px;font-weight:600">模型调优</h2>
+        <button class="btn bp" onclick="goCreate()">+ 创建调优作业</button>
       </div>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
         <select class="fs fs-auto" id="f-st"><option value="">全部状态</option><option value="running">训练中</option><option value="completed">已完成</option><option value="failed">失败</option><option value="terminated">已终止</option><option value="pending">待启动</option></select>
@@ -257,7 +257,7 @@ tbody tr:hover{background:var(--bg3)}tbody tr{cursor:pointer}
   <div class="pg" id="pg-create">
     <div style="display:flex;align-items:center;gap:8px;padding:16px 24px;border-bottom:1px solid var(--bd2);flex-shrink:0">
       <button class="btn bt" onclick="goList()" style="font-size:18px;padding:4px 8px">←</button>
-      <h2 style="font-size:18px;font-weight:600">创建精调作业</h2>
+      <h2 style="font-size:18px;font-weight:600">创建调优作业</h2>
     </div>
     <div class="crt-wrap">
       <div class="stps" id="c-steps"></div>
@@ -283,7 +283,7 @@ tbody tr:hover{background:var(--bg3)}tbody tr{cursor:pointer}
     <div class="d-bar" id="d-bar">
       <div class="d-bar-l">
         <button class="btn bt" onclick="goList()" style="font-size:16px;padding:4px 6px">←</button>
-        <span style="font-size:16px;font-weight:600">精调作业详情</span>
+        <span style="font-size:16px;font-weight:600">调优作业详情</span>
       </div>
       <div class="d-bar-r" id="d-bar-btns"></div>
     </div>
@@ -323,11 +323,11 @@ const T=[
   {id:'ft-20260504-004',nm:'内部知识问答',model:'Qwen3-8B',method:'SFT',mode:'全量参数',st:'failed',cr:'赵旺',tm:'2026-05-04 16:45',dur:'0h 38m',loss:null,ep:3,lr:'1e-4',ds:'知识问答数据集',dv:'Version5',gpu:'A100 × 2'},
   {id:'ft-20260503-005',nm:'评测指标理解',model:'DeepSeek-R1-7B',method:'SFT',mode:'LoRA',st:'completed',cr:'杨浴亮',tm:'2026-05-03 08:10',dur:'1h 45m',loss:0.045,ep:3,lr:'1e-4',ds:'指标解读训练集',dv:'Version2',gpu:'A100 × 1'},
   {id:'ft-20260502-006',nm:'广告文案偏好',model:'Doubao-Pro-32K',method:'DPO',mode:'LoRA',st:'terminated',cr:'王颖',tm:'2026-05-02 11:30',dur:'0h 52m',loss:0.312,ep:2,lr:'5e-5',ds:'文案偏好数据',dv:'Version1',gpu:'A100 × 2'},
-  {id:'ft-20260501-007',nm:'摘要生成精调',model:'Qwen3-8B',method:'SFT',mode:'全量参数',st:'pending',cr:'建闯',tm:'2026-05-01 17:00',dur:'—',loss:null,ep:3,lr:'1e-4',ds:'摘要SFT数据',dv:'Version4',gpu:'A100 × 2'},
+  {id:'ft-20260501-007',nm:'摘要生成调优',model:'Qwen3-8B',method:'SFT',mode:'全量参数',st:'pending',cr:'建闯',tm:'2026-05-01 17:00',dur:'—',loss:null,ep:3,lr:'1e-4',ds:'摘要SFT数据',dv:'Version4',gpu:'A100 × 2'},
   {id:'ft-20260430-008',nm:'多轮对话优化-V2',model:'Qwen3-14B',method:'SFT',mode:'LoRA',st:'completed',cr:'张振宇',tm:'2026-04-30 09:15',dur:'3h 20m',loss:0.041,ep:4,lr:'1e-4',ds:'多轮对话数据集',dv:'Version2',gpu:'A100 × 2'},
   {id:'ft-20260429-009',nm:'安全对齐-DPO',model:'Qwen3-14B',method:'DPO',mode:'LoRA',st:'completed',cr:'赵旺',tm:'2026-04-29 14:00',dur:'2h 05m',loss:0.068,ep:3,lr:'5e-5',ds:'安全偏好数据集',dv:'Version1',gpu:'A100 × 2'},
   {id:'ft-20260428-010',nm:'数学推理微调',model:'DeepSeek-R1-7B',method:'SFT',mode:'全量参数',st:'failed',cr:'杨浴亮',tm:'2026-04-28 10:30',dur:'1h 12m',loss:null,ep:5,lr:'5e-5',ds:'数学推理数据集',dv:'Version3',gpu:'A100 × 4'},
-  {id:'ft-20260427-011',nm:'日志分析精调',model:'Doubao-Pro-32K',method:'SFT',mode:'LoRA',st:'running',cr:'李程程',tm:'2026-04-27 08:45',dur:'—',loss:0.092,ep:3,lr:'2e-4',ds:'日志分析SFT数据',dv:'Version1',gpu:'A100 × 1'},
+  {id:'ft-20260427-011',nm:'日志分析调优',model:'Doubao-Pro-32K',method:'SFT',mode:'LoRA',st:'running',cr:'李程程',tm:'2026-04-27 08:45',dur:'—',loss:0.092,ep:3,lr:'2e-4',ds:'日志分析SFT数据',dv:'Version1',gpu:'A100 × 1'},
   {id:'ft-20260426-012',nm:'合同审查微调-V4',model:'Qwen3-8B',method:'SFT',mode:'LoRA',st:'completed',cr:'王颖',tm:'2026-04-26 16:20',dur:'1h 50m',loss:0.037,ep:3,lr:'1e-4',ds:'合同审查训练集',dv:'Version4',gpu:'A100 × 2'},
   {id:'ft-20260425-013',nm:'代码审查偏好',model:'DeepSeek-R1-32B',method:'DPO',mode:'LoRA',st:'terminated',cr:'建闯',tm:'2026-04-25 11:00',dur:'0h 40m',loss:0.287,ep:2,lr:'5e-5',ds:'代码审查偏好数据',dv:'Version1',gpu:'A100 × 4'},
   {id:'ft-20260424-014',nm:'简历解析微调',model:'Doubao-Lite-4K',method:'SFT',mode:'LoRA',st:'completed',cr:'张振宇',tm:'2026-04-24 09:30',dur:'0h 55m',loss:0.062,ep:3,lr:'2e-4',ds:'简历解析数据集',dv:'Version2',gpu:'A100 × 1'},
@@ -335,7 +335,7 @@ const T=[
   {id:'ft-20260422-016',nm:'表格理解优化',model:'DeepSeek-R1-7B',method:'SFT',mode:'全量参数',st:'completed',cr:'杨浴亮',tm:'2026-04-22 10:00',dur:'4h 10m',loss:0.029,ep:5,lr:'5e-5',ds:'表格理解数据集',dv:'Version3',gpu:'A100 × 4'},
   {id:'ft-20260421-017',nm:'用户画像生成',model:'Doubao-Pro-32K',method:'SFT',mode:'LoRA',st:'failed',cr:'李程程',tm:'2026-04-21 14:30',dur:'0h 22m',loss:null,ep:3,lr:'1e-4',ds:'用户画像数据集',dv:'Version2',gpu:'A100 × 1'},
   {id:'ft-20260420-018',nm:'合规审查对齐',model:'Qwen3-8B',method:'DPO',mode:'LoRA',st:'running',cr:'王颖',tm:'2026-04-20 08:00',dur:'—',loss:0.145,ep:3,lr:'5e-5',ds:'合规偏好数据集',dv:'Version1',gpu:'A100 × 2'},
-  {id:'ft-20260419-019',nm:'搜索排序精调-V3',model:'DeepSeek-R1-7B',method:'SFT',mode:'LoRA',st:'completed',cr:'建闯',tm:'2026-04-19 11:45',dur:'2h 30m',loss:0.051,ep:4,lr:'1e-4',ds:'搜索排序训练集',dv:'Version3',gpu:'A100 × 2'},
+  {id:'ft-20260419-019',nm:'搜索排序调优-V3',model:'DeepSeek-R1-7B',method:'SFT',mode:'LoRA',st:'completed',cr:'建闯',tm:'2026-04-19 11:45',dur:'2h 30m',loss:0.051,ep:4,lr:'1e-4',ds:'搜索排序训练集',dv:'Version3',gpu:'A100 × 2'},
   {id:'ft-20260418-020',nm:'报告摘要生成',model:'Qwen3-14B',method:'SFT',mode:'LoRA',st:'pending',cr:'张振宇',tm:'2026-04-18 16:00',dur:'—',loss:null,ep:3,lr:'1e-4',ds:'报告摘要数据集',dv:'Version2',gpu:'A100 × 2'},
   {id:'ft-20260417-021',nm:'客服情绪识别',model:'Doubao-Lite-4K',method:'SFT',mode:'LoRA',st:'completed',cr:'赵旺',tm:'2026-04-17 09:20',dur:'1h 10m',loss:0.073,ep:3,lr:'2e-4',ds:'情绪识别数据集',dv:'Version1',gpu:'A100 × 1'},
   {id:'ft-20260416-022',nm:'代码补全偏好-V2',model:'DeepSeek-R1-32B',method:'DPO',mode:'LoRA',st:'terminated',cr:'杨浴亮',tm:'2026-04-16 13:50',dur:'0h 35m',loss:0.351,ep:2,lr:'5e-5',ds:'代码补全偏好数据',dv:'Version2',gpu:'A100 × 4'},
@@ -393,7 +393,7 @@ function renderList(){
   if(pgCur>totalPages)pgCur=totalPages;
   const start=(pgCur-1)*pgSize;
   const pageData=fl.slice(start,start+pgSize);
-  document.getElementById('tlb').innerHTML=pageData.map(t=>`<tr onclick="goDetail(T.find(x=>x.id==='${t.id}'))"><td style="font-family:monospace;font-size:12px;color:var(--t3)">${t.id}</td><td style="font-weight:500">${t.nm}</td><td>${t.model}</td><td><span class="tg tg-df">${t.method}</span></td><td>${mTag(t.mode)}</td><td>${sTag(t.st)}</td><td>${t.cr}</td><td style="font-size:12px;color:var(--t3)">${t.tm}</td><td onclick="event.stopPropagation()"><button class="btn bt bs" onclick="goDetail(T.find(x=>x.id==='${t.id}'))">详情</button>${t.st==='running'?`<button class="btn bdt bs" onclick="stopTask('${t.id}')">停止</button>`:''}${t.st!=='running'?`<button class="btn bdt bs" onclick="delTask('${t.id}')">删除</button>`:''}</td></tr>`).join('');
+  document.getElementById('tlb').innerHTML=pageData.map(t=>`<tr onclick="goDetail(T.find(x=>x.id==='${t.id}'))"><td style="font-family:monospace;font-size:12px;color:var(--t3)">${t.id}</td><td style="font-weight:500">${t.nm}</td><td>${t.model}</td><td><span class="tg tg-df">${t.method}</span></td><td>${mTag(t.mode)}</td><td>${sTag(t.st)}</td><td>${t.cr}</td><td style="font-size:12px;color:var(--t3)">${t.tm}</td><td onclick="event.stopPropagation()"><button class="btn bt bs" onclick="goDetail(T.find(x=>x.id==='${t.id}'))">详情</button>${t.st==='running'?`<button class="btn bdt bs" onclick="stopTask('${t.id}')">终止</button>`:''}${t.st!=='running'?`<button class="btn bdt bs" onclick="delTask('${t.id}')">删除</button>`:''}</td></tr>`).join('');
   renderPgn(total,totalPages);
 }
 function renderPgn(total,totalPages){
@@ -421,8 +421,8 @@ document.getElementById('f-me').onchange=function(){pgCur=1;renderList()};
 document.getElementById('f-mo').onchange=function(){pgCur=1;renderList()};
 document.getElementById('f-se').oninput=function(){pgCur=1;renderList()};
 
-function stopTask(id){showM('确认停止','<p>确定停止精调作业「'+T.find(x=>x.id===id).nm+'」？停止后已保存的 Checkpoint 仍可使用。</p>',[{t:'取消',c:'bc',a:'hideM()'},{t:'确认停止',c:'bp',a:"hideM();T.find(x=>x.id==='"+id+"').st='terminated';goList()"}])}
-function delTask(id){showM('确认删除','<p>确定删除精调作业「'+T.find(x=>x.id===id).nm+'」？删除后将无法恢复，请谨慎操作。</p>',[{t:'取消',c:'bc',a:'hideM()'},{t:'确认删除',c:'bp',a:"hideM();const i=T.findIndex(x=>x.id==='"+id+"');if(i>=0)T.splice(i,1);goList()"}])}
+function stopTask(id){showM('确认终止','<p>确定终止调优作业「'+T.find(x=>x.id===id).nm+'」？终止后已保存的 Checkpoint 仍可使用。</p>',[{t:'取消',c:'bc',a:'hideM()'},{t:'确认终止',c:'bp',a:"hideM();T.find(x=>x.id==='"+id+"').st='terminated';goList()"}])}
+function delTask(id){showM('确认删除','<p>确定删除调优作业「'+T.find(x=>x.id===id).nm+'」？删除后将无法恢复，请谨慎操作。</p>',[{t:'取消',c:'bc',a:'hideM()'},{t:'确认删除',c:'bp',a:"hideM();const i=T.findIndex(x=>x.id==='"+id+"');if(i>=0)T.splice(i,1);goList()"}])}
 
 // ===== CREATE =====
 function renderSteps(){
@@ -481,12 +481,12 @@ function errCls(key){return hasErr(key)?' err':''}
 function submitTask(){
   if(!validateStep()){showM('提示','<p style="color:var(--warn)">请完善必填信息后再提交</p>',[{t:'知道了',c:'bp',a:'hideM()'}]);return}
   const nt={id:'ft-'+Date.now().toString().slice(-10),nm:F.name,model:F.model,method:F.method,mode:F.mode,st:'pending',cr:'王颖',tm:new Date().toLocaleString('zh-CN'),dur:'—',loss:null,ep:F.ep,lr:F.lr,ds:F.ds,dv:F.dv,gpu:F.resMode==='private'?F.gpuModel+' × '+F.gpuC:'公共资源'};
-  T.unshift(nt);showM('提交成功',`<p>精调作业「${F.name}」已创建成功，任务即将开始训练。</p>`,[{t:'查看详情',c:'bc',a:"hideM();goDetail(T[0])"},{t:'返回列表',c:'bp',a:"hideM();goList()"}]);
+  T.unshift(nt);showM('提交成功',`<p>调优作业「${F.name}」已创建成功，任务即将开始训练。</p>`,[{t:'查看详情',c:'bc',a:"hideM();goDetail(T[0])"},{t:'返回列表',c:'bp',a:"hideM();goList()"}]);
 }
 
 // Step renderers
 function stepBasic(){
-  return`<h4>基本信息</h4><div class="fg"><label class="fl">任务名称<span class="rq">*</span></label><input class="fi${errCls('name')}" placeholder="请输入精调任务名称，支持英文、数字、中划线" maxlength="50" value="${F.name}" oninput="F.name=this.value;stepErrors=stepErrors.filter(e=>e!=='name');renderSummary()"/>${errTip('name','请输入任务名称')}</div><div class="fg"><label class="fl">任务描述<span class="rq">*</span></label><textarea class="fta${errCls('desc')}" placeholder="请输入任务描述，最多200字" maxlength="200" oninput="F.desc=this.value;stepErrors=stepErrors.filter(e=>e!=='desc');renderSummary()">${F.desc}</textarea>${errTip('desc','请输入任务描述')}</div>`;
+  return`<h4>基本信息</h4><div class="fg"><label class="fl">任务名称<span class="rq">*</span></label><input class="fi${errCls('name')}" placeholder="请输入调优任务名称，支持英文、数字、中划线" maxlength="50" value="${F.name}" oninput="F.name=this.value;stepErrors=stepErrors.filter(e=>e!=='name');renderSummary()"/>${errTip('name','请输入任务名称')}</div><div class="fg"><label class="fl">任务描述<span class="rq">*</span></label><textarea class="fta${errCls('desc')}" placeholder="请输入任务描述，最多200字" maxlength="200" oninput="F.desc=this.value;stepErrors=stepErrors.filter(e=>e!=='desc');renderSummary()">${F.desc}</textarea>${errTip('desc','请输入任务描述')}</div>`;
 }
 function stepConfig(){
   const modelErr=hasErr('model');
@@ -555,7 +555,7 @@ function stepParams(){
 }
 function stepOutput(){
   const autoReg=F.autoReg!==false;
-  return`<h4>产出配置</h4><div class="fg"><label class="fl">自动注册到模型管理</label><div style="display:flex;align-items:center;gap:8px"><label class="tgl"><input type="checkbox" ${autoReg?'checked':''} onchange="F.autoReg=this.checked;renderPanel()"/><span class="tgl-s"></span></label><span style="font-size:13px;color:var(--t2)">训练完成后自动将最优 Checkpoint 注册为自定义模型</span></div></div>${autoReg?`<div class="fg"><label class="fl">模型名称<span class="rq">*</span></label><input class="fi${errCls('outNm')}" placeholder="请输入产出模型名称，支持英文、数字、中划线" maxlength="50" value="${F.outNm}" oninput="F.outNm=this.value;stepErrors=stepErrors.filter(e=>e!=='outNm');renderSummary()"/><div class="fh">精调产出的模型在模型管理中显示的名称</div>${errTip('outNm','请输入产出模型名称')}</div><div style="background:var(--primary-light);border-radius:var(--r2);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:8px;font-size:13px"><span style="font-size:16px">💡</span>精调完成后，模型将自动保存到模型管理中，您也可以手动选择最优 Checkpoint 进行注册</div>`:''}<div class="pg2"><div class="fg"><label class="fl">导出上限</label><input class="fi" type="number" min="1" max="20" value="${F.expLim}" onchange="F.expLim=+this.value"/><div class="fh">最多保存的 Checkpoint 数量，超过时自动删除最旧的</div></div><div class="fg"><label class="fl">保存间隔 (Steps)</label><input class="fi" type="number" min="50" max="5000" step="50" value="${F.saveInt}" onchange="F.saveInt=+this.value"/><div class="fh">每隔多少步保存一次 Checkpoint</div></div></div>`;
+  return`<h4>产出配置</h4><div class="fg"><label class="fl">自动注册到模型管理</label><div style="display:flex;align-items:center;gap:8px"><label class="tgl"><input type="checkbox" ${autoReg?'checked':''} onchange="F.autoReg=this.checked;renderPanel()"/><span class="tgl-s"></span></label><span style="font-size:13px;color:var(--t2)">训练完成后自动将最优 Checkpoint 注册为自定义模型</span></div></div>${autoReg?`<div class="fg"><label class="fl">模型名称<span class="rq">*</span></label><input class="fi${errCls('outNm')}" placeholder="请输入产出模型名称，支持英文、数字、中划线" maxlength="50" value="${F.outNm}" oninput="F.outNm=this.value;stepErrors=stepErrors.filter(e=>e!=='outNm');renderSummary()"/><div class="fh">调优产出的模型在模型管理中显示的名称</div>${errTip('outNm','请输入产出模型名称')}</div><div style="background:var(--primary-light);border-radius:var(--r2);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:8px;font-size:13px"><span style="font-size:16px">💡</span>调优完成后，模型将自动保存到模型管理中，您也可以手动选择最优 Checkpoint 进行注册</div>`:''}<div class="pg2"><div class="fg"><label class="fl">导出上限</label><input class="fi" type="number" min="1" max="20" value="${F.expLim}" onchange="F.expLim=+this.value"/><div class="fh">最多保存的 Checkpoint 数量，超过时自动删除最旧的</div></div><div class="fg"><label class="fl">保存间隔 (Steps)</label><input class="fi" type="number" min="50" max="5000" step="50" value="${F.saveInt}" onchange="F.saveInt=+this.value"/><div class="fh">每隔多少步保存一次 Checkpoint</div></div></div>`;
 }
 function stepResource(){
   const resMode=F.resMode||'public';
@@ -609,7 +609,7 @@ function renderDetail(t){
         <span class="dm-div">|</span>
         <span class="dm-label">创建时间:</span><span class="dm-val">${t.tm}</span>
         <span class="dm-div">|</span>
-        <span class="dm-label">描述:</span><span class="dm-val">${t.nm} - ${t.method} ${t.mode} 精调任务</span>
+        <span class="dm-label">描述:</span><span class="dm-val">${t.nm} - ${t.method} ${t.mode} 调优任务</span>
       </div>
     </div>`;
   swTab('overview');

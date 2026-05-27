@@ -4,10 +4,22 @@ function goList(){showP('list');pgCur=1;renderList()}
 function goDetail(t){dTask=t;showP('detail');renderDetail(t)}
 
 // ===== LIST & PAGINATION =====
-let pgCur=1, pgSize=10;
-function sTag(s){const m={completed:['tg-ok','完成'],running:['tg-wr','运行中'],failed:['tg-er','失败'],terminated:['tg-df','终止中'],pending:['tg-if','排队中']};const[c,t]=m[s]||['tg-df',s];return`<span class="tg ${c}">${t}</span>`}
-function stMap(s){const m={completed:['ok','完成'],running:['wr','运行中'],failed:['er','失败'],terminated:['df','终止中'],pending:['if','排队中']};return m[s]||['df',s]}
-function pBarCls(s){return s==='completed'?'ok':s==='running'?'wr':s==='failed'?'er':s==='terminated'?'df':s==='pending'?'if':'df'}
+let pgCur=1, pgSize=10, editingTaskId=null;
+function sTag(s){const m={completed:['tg-ok','完成'],running:['tg-wr','运行中'],failed:['tg-er','失败'],terminated:['tg-df','终止中'],pending:['tg-if','排队中'],draft:['tg-if','未提交']};const[c,t]=m[s]||['tg-df',s];return`<span class="tg ${c}">${t}</span>`}
+function stMap(s){const m={completed:['ok','完成'],running:['wr','运行中'],failed:['er','失败'],terminated:['df','终止中'],pending:['if','排队中'],draft:['if','未提交']};return m[s]||['df',s]}
+function pBarCls(s){return s==='completed'?'ok':s==='running'?'wr':s==='failed'?'er':s==='terminated'?'df':s==='pending'?'if':s==='draft'?'if':'df'}
+
+function formatDuration(sec){if(sec==null)return'—';const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=Math.floor(sec%60);let r='';if(h>0)r+=h+'h';if(m>0||h>0)r+=m+'m';r+=s+'s';return r}
+function calcRunDuration(t){
+  if(t.st==='draft'||t.st==='pending')return'—';
+  if(t.st==='running'){
+    if(!t.stTm||t.stTm==='—')return t.dur||'—';
+    const now=new Date();const start=new Date(t.stTm.replace(' ','T'));
+    const diff=(now-start)/1000;if(diff<0)return'0s';return formatDuration(diff);
+  }
+  if(t.stTm&&t.edTm&&t.stTm!=='—'&&t.edTm!=='—'){const d1=new Date(t.stTm.replace(' ','T')),d2=new Date(t.edTm.replace(' ','T'));const diff=(d2-d1)/1000;if(diff>=0)return formatDuration(diff)}
+  return t.dur||'—'
+}
 function mTag(m){return m}
 function getFiltered(){
   const fs=document.getElementById('f-st').value,fm=document.getElementById('f-me').value,fmo=document.getElementById('f-mo').value,fs2=document.getElementById('f-se').value.toLowerCase();
@@ -20,7 +32,13 @@ function renderList(){
   if(pgCur>totalPages)pgCur=totalPages;
   const start=(pgCur-1)*pgSize;
   const pageData=fl.slice(start,start+pgSize);
-  document.getElementById('tlb').innerHTML=pageData.map(t=>{const[sc,sl]=stMap(t.st);const fmtTm=t.tm&&t.tm.split(':').length===2?t.tm+':00':t.tm;return`<tr onclick="goDetail(T.find(x=>x.id==='${t.id}'))"><td class="td-id" title="${t.id}">${t.id}</td><td class="td-name"><div class="title">${t.nm}</div><div class="desc">${t.desc||''}</div></td><td style="width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.model}</td><td><span class="tg tg-df">${t.method}</span></td><td>${mTag(t.mode)}</td><td><div class="status-cell"><span class="status-dot ${sc}"></span><span class="status-label">${sl}</span></div></td><td><div class="progress-wrap"><div class="progress-bar"><div class="fill ${pBarCls(t.st)}" style="width:${t.progress}%"></div></div><span class="progress-text">${t.progress}%</span></div></td><td style="width:120px">${t.cr}</td><td style="width:190px;white-space:nowrap">${fmtTm}</td><td class="td-actions" onclick="event.stopPropagation()"><button class="action-btn" onclick="goDetail(T.find(x=>x.id==='${t.id}'))">详情</button><button class="action-btn" onclick="copyTask('${t.id}')">复制</button>${t.st==='running'?`<button class="action-btn danger" onclick="stopTask('${t.id}')">停止</button>`:''}${t.st!=='running'?`<button class="action-btn danger" onclick="delTask('${t.id}')">删除</button>`:''}</td></tr>`}).join('');
+  document.getElementById('tlb').innerHTML=pageData.map(t=>{
+    const[sc,sl]=stMap(t.st);
+    const fmtTm=t.tm&&t.tm.split(':').length===2?t.tm+':00':t.tm;
+    const dur=calcRunDuration(t);
+    const editBtn=t.st==='draft'?`<button class="action-btn" onclick="event.stopPropagation();goEditTask('${t.id}')">编辑</button>`:`<button class="action-btn" onclick="event.stopPropagation();goDetail(T.find(x=>x.id==='${t.id}'))">详情</button>`;
+    return`<tr><td class="td-id" title="${t.id}">${t.id}</td><td class="td-name"><div class="title" onclick="goDetail(T.find(x=>x.id==='${t.id}'))">${t.nm}</div><div class="desc">${t.desc||''}</div></td><td style="width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.model}</td><td><span class="tg tg-df">${t.method}</span></td><td>${mTag(t.mode)}</td><td><div class="status-cell"><span class="status-dot ${sc}"></span><span class="status-label">${sl}</span></div></td><td style="width:140px;font-family:var(--ff-mono);font-size:13px;color:var(--t2)">${dur}</td><td style="width:120px">${t.cr}</td><td style="width:190px;white-space:nowrap">${fmtTm}</td><td class="td-actions" onclick="event.stopPropagation()">${editBtn}<button class="action-btn" onclick="toggleListMore(event,'${t.id}')">更多</button></td></tr>`
+  }).join('');
   renderPgn(total,totalPages);
 }
 function renderPgn(total,totalPages){
@@ -49,11 +67,33 @@ document.getElementById('f-me').onchange=function(){pgCur=1;renderList()};
 document.getElementById('f-mo').onchange=function(){pgCur=1;renderList()};
 document.getElementById('f-se').oninput=function(){pgCur=1;renderList()};
 
-function stopTask(id){const t=T.find(x=>x.id===id);showM('',`确定停止精调任务「<span class="md-del-name">${t.nm}</span>」？停止后已保存的 Checkpoint 仍可使用。`,[{t:'取消',c:'bc',a:'hideM()'},{t:'确认停止',c:'bp',a:`hideM();T.find(x=>x.id==='${id}').st='terminated';goList()`}]);document.getElementById('m-tit').innerHTML=`<span class="md-del-hdr-icon md-del-hdr-info">!</span> 确认停止`;document.getElementById('m-body').className='md-b md-b-del'}
-function delTask(id){const t=T.find(x=>x.id===id);showM('',`确定删除精调任务「<span class="md-del-name">${t.nm}</span>」吗？删除后无法恢复，请谨慎操作。`,[{t:'取消',c:'bc',a:'hideM()'},{t:'删除',c:'bd',a:`hideM();const i=T.findIndex(x=>x.id==='${id}');if(i>=0)T.splice(i,1);goList()`}]);document.getElementById('m-tit').innerHTML=`<span class="md-del-hdr-icon">!</span> 确认删除`;document.getElementById('m-body').className='md-b md-b-del'}
-function copyTask(id){const t=T.find(x=>x.id===id);if(!t)return;F.name=t.nm+' (副本)';F.desc='复制自：'+t.nm;F.method=t.method;F.model=t.model;F.mode=t.mode;F.ds=t.ds;F.dv=t.dv;F.lr=t.lr;F.ep=t.ep;F.outNm=t.outNm||'';F.saveInt=t.saveInt||200;F.expLim=t.expLim||5;F.resMode=t.resType==='独立资源'?'private':'public';F.resPool=t.resPool||'pool-a';F.gpuModel=t.gpuModel||'A100';F.gpuC=t.gpuC||2;editModule=0;reachedSteps=[0,1,2,3,4,5];showP('create');renderAllCards()}
-function stopDetailTask(id){const t=T.find(x=>x.id===id);showM('',`确定停止精调任务「<span class="md-del-name">${t.nm}</span>」？停止后已保存的 Checkpoint 仍可使用。`,[{t:'取消',c:'bc',a:'hideM()'},{t:'确认停止',c:'bp',a:`hideM();T.find(x=>x.id==='${id}').st='terminated';renderDetail(T.find(x=>x.id==='${id}'))`}]);document.getElementById('m-tit').innerHTML=`<span class="md-del-hdr-icon md-del-hdr-info">!</span> 确认停止`;document.getElementById('m-body').className='md-b md-b-del'}
-function delDetailTask(id){const t=T.find(x=>x.id===id);showM('',`确定删除精调任务「<span class="md-del-name">${t.nm}</span>」吗？删除后无法恢复，请谨慎操作。`,[{t:'取消',c:'bc',a:'hideM()'},{t:'删除',c:'bd',a:`hideM();const i=T.findIndex(x=>x.id==='${id}');if(i>=0)T.splice(i,1);goList()`}]);document.getElementById('m-tit').innerHTML=`<span class="md-del-hdr-icon">!</span> 确认删除`;document.getElementById('m-body').className='md-b md-b-del'}
+function stopTask(id){const t=T.find(x=>x.id===id);showM('',`确定终止调优任务「<span class="md-del-name">${t.nm}</span>」？终止后已保存的 Checkpoint 仍可使用。`,[{t:'取消',c:'bc',a:'hideM()'},{t:'确认终止',c:'bp',a:`hideM();T.find(x=>x.id==='${id}').st='terminated';goList()`}]);document.getElementById('m-tit').innerHTML=`<span class="md-del-hdr-icon md-del-hdr-info">!</span> 确认终止`;document.getElementById('m-body').className='md-b md-b-del'}
+function delTask(id){const t=T.find(x=>x.id===id);showM('',`确定删除调优任务「<span class="md-del-name">${t.nm}</span>」吗？删除后无法恢复，请谨慎操作。`,[{t:'取消',c:'bc',a:'hideM()'},{t:'删除',c:'bd',a:`hideM();const i=T.findIndex(x=>x.id==='${id}');if(i>=0)T.splice(i,1);goList()`}]);document.getElementById('m-tit').innerHTML=`<span class="md-del-hdr-icon">!</span> 确认删除`;document.getElementById('m-body').className='md-b md-b-del'}
+function copyTask(id){const t=T.find(x=>x.id===id);if(!t)return;F.name=t.nm+' (副本)';F.desc='复制自：'+t.nm;F.method=t.method;F.model=t.model;F.mode=t.mode;F.ds=t.ds;F.dv=t.dv;F.lr=t.lr;F.ep=t.ep;F.outNm=t.outNm||'';F.outDesc=t.outDesc||'';F.saveCount=t.saveCount||3;F.resMode=t.resType==='独立资源'?'private':'public';F.resPool=t.resPool||'pool-a';F.gpuModel=t.gpuModel||'A100';F.gpuC=t.gpuC||2;editModule=0;reachedSteps=[0,1,2,3,4,5];showP('create');renderAllCards()}
+function stopDetailTask(id){const t=T.find(x=>x.id===id);showM('',`确定终止调优任务「<span class="md-del-name">${t.nm}</span>」？终止后已保存的 Checkpoint 仍可使用。`,[{t:'取消',c:'bc',a:'hideM()'},{t:'确认终止',c:'bp',a:`hideM();T.find(x=>x.id==='${id}').st='terminated';renderDetail(T.find(x=>x.id==='${id}'))`}]);document.getElementById('m-tit').innerHTML=`<span class="md-del-hdr-icon md-del-hdr-info">!</span> 确认终止`;document.getElementById('m-body').className='md-b md-b-del'}
+function delDetailTask(id){const t=T.find(x=>x.id===id);showM('',`确定删除调优任务「<span class="md-del-name">${t.nm}</span>」吗？删除后无法恢复，请谨慎操作。`,[{t:'取消',c:'bc',a:'hideM()'},{t:'删除',c:'bd',a:`hideM();const i=T.findIndex(x=>x.id==='${id}');if(i>=0)T.splice(i,1);goList()`}]);document.getElementById('m-tit').innerHTML=`<span class="md-del-hdr-icon">!</span> 确认删除`;document.getElementById('m-body').className='md-b md-b-del'}
+function retryTask(id){
+  const t=T.find(x=>x.id===id);
+  showM('',`确定对调优任务「<span class="md-del-name">${t.nm}</span>」进行断点重试？将从上次保存的 Checkpoint 继续训练。`,[{t:'取消',c:'bc',a:'hideM()'},{t:'确认重试',c:'bp',a:`hideM();T.find(x=>x.id==='${id}').st='pending';goList()`}]);
+  document.getElementById('m-tit').innerHTML=`<span class="md-del-hdr-icon md-del-hdr-info">!</span> 确认重试`;document.getElementById('m-body').className='md-b md-b-del'
+}
+function toggleListMore(e,id){
+  e.stopPropagation();hideListMore();
+  const t=T.find(x=>x.id===id);if(!t)return;
+  const rect=e.currentTarget.getBoundingClientRect();
+  const menu=document.getElementById('list-more-menu');
+  let items='';
+  if(t.st==='pending'||t.st==='running')items+=`<div class="more-item danger" onclick="event.stopPropagation();hideListMore();stopTask('${id}')">终止</div>`;
+  else if(t.st==='failed'||t.st==='terminated')items+=`<div class="more-item" onclick="event.stopPropagation();hideListMore();retryTask('${id}')">断点重试</div>`;
+  const canDel=t.st!=='pending'&&t.st!=='running';
+  items+=`<div class="more-item" onclick="event.stopPropagation();hideListMore();copyTask('${id}')">复制</div>`;
+  items+=`<div class="more-item ${canDel?'danger':''}" onclick="event.stopPropagation();${canDel?'hideListMore();delTask(\''+id+'\')':''}"${canDel?'':' style="opacity:0.35;cursor:not-allowed;pointer-events:none"'}>删除</div>`;
+  menu.innerHTML=items;
+  menu.style.left=rect.left+'px';menu.style.top=rect.bottom+'px';
+  menu.classList.add('sh');
+  setTimeout(()=>document.addEventListener('click',hideListMore,{once:true}),0)
+}
+function hideListMore(){const m=document.getElementById('list-more-menu');if(m)m.classList.remove('sh')}
 function toggleMoreMenu(e){e.stopPropagation();const m=document.getElementById('more-menu');m.classList.toggle('sh');if(m.classList.contains('sh')){setTimeout(()=>document.addEventListener('click',hideMoreMenu,{once:true}),0)}}
 function hideMoreMenu(){const m=document.getElementById('more-menu');if(m)m.classList.remove('sh')}
 
@@ -69,7 +109,7 @@ function isStepCompleted(i) {
     case 1: return !!F.model;
     case 2: return !!(F.ds && F.dv);
     case 3: return !!(F.lr && F.ep);
-    case 4: return F.autoReg === false || !!F.outNm;
+    case 4: return !!(F.outNm && F.outDesc && F.saveCount);
     case 5: return !!F.resMode;
     default: return false;
   }
@@ -89,12 +129,14 @@ function getFirstUnlockedStep() {
 }
 
 function goCreate() {
+  editingTaskId=null;
   editModule = 0;
   reachedSteps = [0];
   reeditFlow = false;
-  F.name='';F.desc='';F.model='';F.ds='';F.dv='';F.outNm='';
+  F.name='';F.desc='';F.model='';F.ds='';F.dv='';F.outNm='';F.outDesc='';F.saveCount=3;
   F.lr='';F.ep='';F.bs='';F.msl='';F.wr='';F.wd='';F.lrR='';F.lrA='';F.lrD='';F.lrT='';
   F.resMode='';F.resPool='';F.gpuModel='';F.gpuC='';
+  const h2=document.querySelector('#pg-create h2');if(h2)h2.textContent='创建调优任务';
   showP('create');
   renderAllCards();
   updateFeeDisplay();
@@ -133,7 +175,9 @@ function nextStep(i) {
       if (!F.ds) stepErrors.push('ds');
       if (!F.dv) stepErrors.push('dv');
     } else if (i === 4) {
-      if (F.autoReg !== false && !F.outNm) stepErrors.push('outNm');
+      if (!F.outNm) stepErrors.push('outNm');
+      if (!F.outDesc) stepErrors.push('outDesc');
+      if (!F.saveCount) stepErrors.push('saveCount');
     }
     if (stepErrors.length > 0) { renderAllCards(); return; }
   }
@@ -197,6 +241,7 @@ function renderAllCards() {
   }).join('');
 
   if (editModule >= 0) initCustomSelects();
+  updateFeeDisplay();
 }
 
 function enterEditMode(idx) {
@@ -211,26 +256,69 @@ function hasErr(key) { return stepErrors.includes(key) }
 function errTip(key, msg) { return hasErr(key) ? `<div class="fe" style="display:block">${msg}</div>` : '' }
 function errCls(key) { return hasErr(key) ? ' err' : '' }
 
-function submitTask() {
-  stepErrors = [];
-  if (!F.name) stepErrors.push('name');
-  if (!F.desc) stepErrors.push('desc');
-  if (!F.model) stepErrors.push('model');
-  if (!F.ds) stepErrors.push('ds');
-  if (!F.dv) stepErrors.push('dv');
-  if (F.autoReg !== false && !F.outNm) stepErrors.push('outNm');
-  if (F.resMode === 'private') {
-    if (!F.resPool) stepErrors.push('resPool');
-    if (!F.gpuModel) stepErrors.push('gpuModel');
-    if (!F.gpuC) stepErrors.push('gpuC');
+function validateForm(){
+  stepErrors=[];
+  if(!F.name)stepErrors.push('name');
+  if(!F.desc)stepErrors.push('desc');
+  if(!F.model)stepErrors.push('model');
+  if(!F.ds)stepErrors.push('ds');
+  if(!F.dv)stepErrors.push('dv');
+  if(!F.outNm)stepErrors.push('outNm');
+  if(!F.outDesc)stepErrors.push('outDesc');
+  if(!F.saveCount)stepErrors.push('saveCount');
+  if(F.resMode==='private'){
+    if(!F.resPool)stepErrors.push('resPool');
+    if(!F.gpuModel)stepErrors.push('gpuModel');
+    if(!F.gpuC)stepErrors.push('gpuC');
   }
-  if (stepErrors.length > 0) {
-    showM('提示', '<p style="color:var(--warn)">请完善必填信息后再提交</p>', [{ t: '知道了', c: 'bp', a: 'hideM()' }]);
-    return;
+  if(stepErrors.length>0){
+    showM('提示','<p style="color:var(--warn)">请完善必填信息后再提交</p>',[{t:'知道了',c:'bp',a:'hideM()'}]);
+    return false;
   }
-  const nt = { id: 'ft-' + Date.now().toString().slice(-10), nm: F.name, model: F.model, method: F.method, mode: F.mode, st: 'pending', cr: '王颖', tm: new Date().toLocaleString('zh-CN'), dur: '—', loss: null, ep: F.ep, lr: F.lr, ds: F.ds, dv: F.dv, gpu: F.resMode === 'private' ? F.gpuModel + ' × ' + F.gpuC : '公共资源' };
+  return true;
+}
+function buildTaskObj(st){
+  return{id:'ft-'+Date.now().toString().slice(-10),nm:F.name,desc:F.desc||'',model:F.model,method:F.method,mode:F.mode,st:st,cr:'王颖',tm:new Date().toLocaleString('zh-CN'),dur:'—',loss:null,progress:0,ep:F.ep,lr:F.lr,ds:F.ds,dv:F.dv,gpu:F.resMode==='private'?F.gpuModel+' × '+F.gpuC:'公共资源',stTm:'—',edTm:'—',outNm:F.outNm||'',outDesc:F.outDesc||'',saveCount:F.saveCount||3,resType:F.resMode==='private'?'独立资源':'公共资源',resPool:F.resPool||'',gpuModel:F.gpuModel||'',gpuC:F.gpuC||1}
+}
+function updateFromF(id){
+  const t=T.find(x=>x.id===id);if(!t)return;
+  t.nm=F.name;t.desc=F.desc;t.model=F.model;t.method=F.method;t.mode=F.mode;
+  t.ep=F.ep;t.lr=F.lr;t.ds=F.ds;t.dv=F.dv;
+  t.gpu=F.resMode==='private'?F.gpuModel+' × '+F.gpuC:'公共资源';
+  t.outNm=F.outNm||'';t.outDesc=F.outDesc||'';t.saveCount=F.saveCount||3;
+  t.resType=F.resMode==='private'?'独立资源':'公共资源';
+  t.resPool=F.resPool||'';t.gpuModel=F.gpuModel||'';t.gpuC=F.gpuC||1
+}
+function saveTask(){
+  if(!validateForm())return;
+  if(editingTaskId){updateFromF(editingTaskId);showM('保存成功','<p>调优任务「'+F.name+'」已更新。</p>',[{t:'前往列表',c:'bp',a:'hideM();editingTaskId=null;goList()'}]);return}
+  const nt=buildTaskObj('draft');
   T.unshift(nt);
-  showM('提交成功', `<p>精调任务「${F.name}」已创建成功，任务即将开始训练。</p>`, [{ t: '查看详情', c: 'bc', a: "hideM();goDetail(T[0])" }, { t: '返回列表', c: 'bp', a: "hideM();goList()" }]);
+  showM('保存成功','<p>调优任务「'+F.name+'」已保存为草稿，可稍后提交。</p>',[{t:'前往列表',c:'bp',a:'hideM();goList()'}])
+}
+function submitTask(){
+  if(!validateForm())return;
+  if(editingTaskId){updateFromF(editingTaskId);T.find(x=>x.id===editingTaskId).st='pending';showM('提交成功','<p>调优任务「'+F.name+'」已提交，即将开始训练。</p>',[{t:'前往列表',c:'bp',a:'hideM();editingTaskId=null;goList()'}]);return}
+  const nt=buildTaskObj('pending');
+  T.unshift(nt);
+  showM('提交成功','<p>调优任务「'+F.name+'」已创建成功，任务即将开始训练。</p>',[{t:'查看详情',c:'bc',a:'hideM();goDetail(T[0])'},{t:'返回列表',c:'bp',a:'hideM();goList()'}])
+}
+function goEditTask(id){
+  const t=T.find(x=>x.id===id);if(!t)return;
+  editingTaskId=id;
+  F.name=t.nm;F.desc=t.desc||'';F.method=t.method;F.model=t.model;F.mode=t.mode;
+  F.ds=t.ds;F.dv=t.dv;F.lr=t.lr;F.ep=t.ep;
+  F.outNm=t.outNm||'';F.outDesc=t.outDesc||'';F.saveCount=t.saveCount||3;
+  F.resMode=t.resType==='独立资源'?'private':'public';
+  F.resPool=t.resPool||'pool-a';F.gpuModel=t.gpuModel||'A100';F.gpuC=t.gpuC||2;
+  F.bs=F.bs||4;F.msl=F.msl||2048;F.wr=F.wr||0.03;F.wd=F.wd||0.01;
+  F.lrR=F.lrR||8;F.lrA=F.lrA||16;F.lrD=F.lrD||0.05;F.lrT=F.lrT||'q_proj,v_proj';
+  F.valMode='none';F.valRatio=10;F.evalCount=10;
+  editModule=-1;reachedSteps=[0,1,2,3,4,5];reeditFlow=true;stepErrors=[];
+  const h2=document.querySelector('#pg-create h2');if(h2)h2.textContent='编辑调优任务';
+  showP('create');
+  renderAllCards();
+  updateFeeDisplay();
 }
 
 // ===== PREVIEW RENDERERS =====
@@ -244,7 +332,11 @@ function previewData() {
   let html = `<div class="preview-row"><span class="preview-label">训练集</span><span class="preview-value${F.ds ? '' : ' empty'}">${F.ds ? F.ds + ' > ' + (F.dv || '') : '—'}</span></div>`;
   let valText = '—';
   if (F.valMode === 'none') valText = '不使用';
-  else if (F.valMode === 'split') valText = '分割训练集（' + F.valRatio + '%）';
+  else if (F.valMode === 'split') {
+    const dsCount=DS.find(d=>d.nm===F.ds)?.n||0;
+    const valCount=Math.round(dsCount*F.valRatio/100);
+    valText = '分割训练集（' + F.valRatio + '% · ' + valCount.toLocaleString() + '条）';
+  }
   else if (F.valMode === 'select') valText = (F.valDs || '') + ' > ' + (F.valDv || '');
   html += `<div class="preview-row"><span class="preview-label">验证集</span><span class="preview-value${valText !== '—' ? '' : ' empty'}">${valText}</span></div>`;
   if (F.valMode === 'split' || F.valMode === 'select') {
@@ -266,8 +358,7 @@ function previewParams() {
   return `<div class="preview-grid">${items.map(it=>`<div class="preview-grid-item"><span class="preview-label">${it.l}</span><span class="preview-value${it.v === '—' ? ' empty' : ''}">${it.v}</span></div>`).join('')}</div>`;
 }
 function previewOutput() {
-  const autoReg = F.autoReg !== false;
-  return `<div class="preview-row"><span class="preview-label">自动保存到模型管理</span><span class="preview-value">${autoReg ? '是' : '否'}</span></div>${autoReg ? `<div class="preview-row"><span class="preview-label">模型名称</span><span class="preview-value${F.outNm ? '' : ' empty'}">${F.outNm || '—'}</span></div>` : ''}<div class="preview-row"><span class="preview-label">导出上限</span><span class="preview-value">${F.expLim || '—'}</span></div><div class="preview-row"><span class="preview-label">保存间隔 (Steps)</span><span class="preview-value">${F.saveInt || '—'} 步</span></div>`;
+  return `<div class="preview-row"><span class="preview-label">模型名称</span><span class="preview-value${F.outNm ? '' : ' empty'}">${F.outNm || '—'}</span></div><div class="preview-row"><span class="preview-label">模型描述</span><span class="preview-value${F.outDesc ? '' : ' empty'}">${F.outDesc || '—'}</span></div><div class="preview-row"><span class="preview-label">产出保存次数</span><span class="preview-value">${F.saveCount} 次</span></div>`;
 }
 function previewResource() {
   const isPrivate = F.resMode === 'private';
@@ -282,7 +373,7 @@ function previewResource() {
 
 // ===== EDIT RENDERERS =====
 function editBasic() {
-  return `<div class="fg"><label class="fl">任务名称<span class="rq">*</span></label><input class="fi${errCls('name')}" placeholder="请输入精调任务名称，支持英文、数字、中划线" maxlength="50" value="${F.name}" oninput="F.name=this.value;stepErrors=stepErrors.filter(e=>e!=='name')"/>${errTip('name','请输入任务名称')}</div><div class="fg"><label class="fl">任务描述<span class="rq">*</span></label><textarea class="fta${errCls('desc')}" placeholder="请输入任务描述，最多200字" maxlength="200" oninput="F.desc=this.value;stepErrors=stepErrors.filter(e=>e!=='desc')">${F.desc}</textarea>${errTip('desc','请输入任务描述')}</div>`;
+  return `<div class="fg"><label class="fl">任务名称<span class="rq">*</span></label><input class="fi${errCls('name')}" placeholder="请输入调优任务名称，支持英文、数字、中划线" maxlength="50" value="${F.name}" oninput="F.name=this.value;stepErrors=stepErrors.filter(e=>e!=='name')"/>${errTip('name','请输入任务名称')}</div><div class="fg"><label class="fl">任务描述<span class="rq">*</span></label><textarea class="fta${errCls('desc')}" placeholder="请输入任务描述，最多200字" maxlength="200" oninput="F.desc=this.value;stepErrors=stepErrors.filter(e=>e!=='desc')">${F.desc}</textarea>${errTip('desc','请输入任务描述')}</div>`;
 }
 function editConfig() {
   const modelErr = hasErr('model');
@@ -332,7 +423,9 @@ function editData() {
   if (F.ds && F.dv) {
     valHtml = `<div class="fg"><label class="fl">验证集<span class="rq">*</span></label><div class="rg"><label class="ri"><input type="radio" name="valMode" value="none" ${F.valMode === 'none' ? 'checked' : ''} onchange="F.valMode='none';F.valDs='';F.valDv='';renderAllCards()"/> 不使用</label><label class="ri"><input type="radio" name="valMode" value="split" ${F.valMode === 'split' ? 'checked' : ''} onchange="F.valMode='split';F.valDs='';F.valDv='';renderAllCards()"/> 分割训练集</label><label class="ri"><input type="radio" name="valMode" value="select" ${F.valMode === 'select' ? 'checked' : ''} onchange="F.valMode='select';F.valDs='';F.valDv='';renderAllCards()"/> 选择数据集</label></div></div>`;
     if (F.valMode === 'split') {
-      valHtml += `<div class="fg"><label class="fl">分割比例</label><div style="display:flex;align-items:center;gap:8px"><input class="fi" type="number" min="5" max="50" step="5" value="${F.valRatio}" style="width:100px" onchange="F.valRatio=+this.value"/><span style="font-size:13px;color:var(--t2)">%（从训练集中分割该比例的数据作为验证集）</span></div><div class="fh">推荐 10%~20%，比例过大会导致训练数据不足</div></div>`;
+      const dsCount=DS.find(d=>d.nm===F.ds)?.n||0;
+      const valCount=Math.round(dsCount*F.valRatio/100);
+      valHtml += `<div class="fg"><label class="fl">分割比例</label><div style="display:flex;align-items:center;gap:8px"><input class="fi" type="number" min="5" max="50" step="5" value="${F.valRatio}" style="width:100px" onchange="F.valRatio=+this.value;renderAllCards()"/><span style="font-size:13px;color:var(--t2)">%（共 ${valCount.toLocaleString()} 条数据用作验证集）</span></div><div class="fh">推荐 10%~20%，比例过大会导致训练数据不足</div></div>`;
     }
     if (F.valMode === 'select') {
       valHtml += `<div class="fg" style="margin-bottom:16px"><div style="display:grid;grid-template-columns:1fr auto;gap:0 24px;align-items:start"><div><label class="fl" style="margin-bottom:6px">验证集<span class="rq">*</span></label><select class="fs" data-cs-width="100%" onchange="F.valDs=this.value;F.valDv='';renderAllCards()"><option value="">请选择数据集</option>${valFl.map(d => `<option value="${d.nm}" ${F.valDs === d.nm ? 'selected' : ''} data-sub="${d.type} · ${d.n.toLocaleString()}条 · ${d.ow}">${d.nm}</option>`).join('')}</select></div><div>${F.valDs ? `<label class="fl" style="margin-bottom:6px">版本<span class="rq">*</span></label><select class="fs" data-cs-width="200px" onchange="F.valDv=this.value;renderAllCards()"><option value="">请选择</option>${valVersions.map(v => `<option value="${v}" ${F.valDv === v ? 'selected' : ''}>${v}</option>`).join('')}</select>` : ''}</div></div><div class="fh">选择与训练集同类型的数据集作为验证集</div></div>`;
@@ -346,11 +439,10 @@ function editData() {
 function editParams() {
   const isLora = F.mode === 'LoRA';
   const advShown = F.advShown || false;
-  return `<div class="pg2"><div class="fg"><label class="fl">学习率 (Learning Rate)<span class="rq">*</span></label><select class="fs" data-cs-radius="8px" data-cs-width="100%" onchange="F.lr=this.value">${['1e-5','5e-5','1e-4','2e-4','5e-4'].map(v => `<option value="${v}" ${F.lr === v ? 'selected' : ''}>${v}</option>`).join('')}</select><div class="fh">推荐值：LoRA 1e-4~2e-4，全量参数 5e-5~1e-4</div></div><div class="fg"><label class="fl">训练轮数 (Epochs)<span class="rq">*</span></label><input class="fi" type="number" min="1" max="50" value="${F.ep}" onchange="F.ep=+this.value"/><div class="fh">通常 3~5 轮即可收敛，过多可能过拟合</div></div><div class="fg"><label class="fl">批次大小 (Batch Size)</label><input class="fi" type="number" min="1" max="128" value="${F.bs}" onchange="F.bs=+this.value"/><div class="fh">受 GPU 显存限制，值越大显存占用越高</div></div><div class="fg"><label class="fl">最大序列长度</label><select class="fs" data-cs-radius="8px" data-cs-width="100%" onchange="F.msl=+this.value">${[512,1024,2048,4096,8192].map(v => `<option value="${v}" ${F.msl === v ? 'selected' : ''}>${v}</option>`).join('')}</select></div><div class="fg"><label class="fl">Warmup 比例</label><input class="fi" type="number" min="0" max="0.5" step="0.01" value="${F.wr}" onchange="F.wr=+this.value"/></div><div class="fg"><label class="fl">权重衰减 (Weight Decay)</label><input class="fi" type="number" min="0" max="0.1" step="0.01" value="${F.wd}" onchange="F.wd=+this.value"/></div></div>${isLora ? `<div class="pg2" style="margin-top:16px"><div class="fg"><label class="fl">LoRA Rank (r)</label><select class="fs" data-cs-radius="8px" data-cs-width="100%" onchange="F.lrR=+this.value">${[4,8,16,32,64].map(v => `<option value="${v}" ${F.lrR === v ? 'selected' : ''}>${v}</option>`).join('')}</select><div class="fh">秩越高可学习参数越多，但显存占用也越高</div></div><div class="fg"><label class="fl">LoRA Alpha</label><input class="fi" type="number" min="1" max="128" value="${F.lrA}" onchange="F.lrA=+this.value"/><div class="fh">通常设置为 Rank 的 2 倍</div></div><div class="fg"><label class="fl">LoRA Dropout</label><input class="fi" type="number" min="0" max="0.5" step="0.01" value="${F.lrD}" onchange="F.lrD=+this.value"/></div><div class="fg"><label class="fl">目标模块</label><input class="fi" value="${F.lrT}" maxlength="100" oninput="F.lrT=this.value"/><div class="fh">逗号分隔，常见：q_proj,v_proj,k_proj,o_proj</div></div></div>` : ''}<div class="step-title-sm" onclick="F.advShown=!F.advShown;renderAllCards()"><span>高级配置</span><span class="toggle-arrow">${advShown ? '▲' : '▼'}</span></div><div class="adv-config" style="display:${advShown ? 'block' : 'none'}"><div class="fg"><label class="fl">自定义配置</label><textarea class="fta" style="height:80px;resize:vertical" placeholder="请根据需要自定义配置内容" oninput="F.advCfg=this.value">${F.advCfg || ''}</textarea><div class="fh">请根据需要自定义配置内容，可配置内容请参考<a href="javascript:void(0)" style="color:var(--primary);text-decoration:underline">配置说明</a></div></div></div>`;
+  return `<div class="pg2"><div class="fg"><label class="fl">学习率 (Learning Rate)<span class="rq">*</span></label><select class="fs" data-cs-radius="8px" data-cs-width="100%" onchange="F.lr=this.value;updateFeeDisplay()">${['1e-5','5e-5','1e-4','2e-4','5e-4'].map(v => `<option value="${v}" ${F.lr === v ? 'selected' : ''}>${v}</option>`).join('')}</select><div class="fh">推荐值：LoRA 1e-4~2e-4，全量参数 5e-5~1e-4</div></div><div class="fg"><label class="fl">训练轮数 (Epochs)<span class="rq">*</span></label><input class="fi" type="number" min="1" max="50" value="${F.ep}" onchange="F.ep=+this.value;updateFeeDisplay()"/><div class="fh">通常 3~5 轮即可收敛，过多可能过拟合</div></div><div class="fg"><label class="fl">批次大小 (Batch Size)</label><input class="fi" type="number" min="1" max="128" value="${F.bs}" onchange="F.bs=+this.value"/><div class="fh">受 GPU 显存限制，值越大显存占用越高</div></div><div class="fg"><label class="fl">最大序列长度</label><select class="fs" data-cs-radius="8px" data-cs-width="100%" onchange="F.msl=+this.value">${[512,1024,2048,4096,8192].map(v => `<option value="${v}" ${F.msl === v ? 'selected' : ''}>${v}</option>`).join('')}</select></div><div class="fg"><label class="fl">Warmup 比例</label><input class="fi" type="number" min="0" max="0.5" step="0.01" value="${F.wr}" onchange="F.wr=+this.value"/></div><div class="fg"><label class="fl">权重衰减 (Weight Decay)</label><input class="fi" type="number" min="0" max="0.1" step="0.01" value="${F.wd}" onchange="F.wd=+this.value"/></div></div>${isLora ? `<div class="pg2" style="margin-top:16px"><div class="fg"><label class="fl">LoRA Rank (r)</label><select class="fs" data-cs-radius="8px" data-cs-width="100%" onchange="F.lrR=+this.value">${[4,8,16,32,64].map(v => `<option value="${v}" ${F.lrR === v ? 'selected' : ''}>${v}</option>`).join('')}</select><div class="fh">秩越高可学习参数越多，但显存占用也越高</div></div><div class="fg"><label class="fl">LoRA Alpha</label><input class="fi" type="number" min="1" max="128" value="${F.lrA}" onchange="F.lrA=+this.value"/><div class="fh">通常设置为 Rank 的 2 倍</div></div><div class="fg"><label class="fl">LoRA Dropout</label><input class="fi" type="number" min="0" max="0.5" step="0.01" value="${F.lrD}" onchange="F.lrD=+this.value"/></div><div class="fg"><label class="fl">目标模块</label><input class="fi" value="${F.lrT}" maxlength="100" oninput="F.lrT=this.value"/><div class="fh">逗号分隔，常见：q_proj,v_proj,k_proj,o_proj</div></div></div>` : ''}<div class="step-title-sm" onclick="F.advShown=!F.advShown;renderAllCards()"><span>高级配置</span><span class="toggle-arrow">${advShown ? '▲' : '▼'}</span></div><div class="adv-config" style="display:${advShown ? 'block' : 'none'}"><div class="fg"><label class="fl">自定义配置</label><textarea class="fta" style="height:80px;resize:vertical" placeholder="请根据需要自定义配置内容" oninput="F.advCfg=this.value">${F.advCfg || ''}</textarea><div class="fh">请根据需要自定义配置内容，可配置内容请参考<a href="javascript:void(0)" style="color:var(--primary);text-decoration:underline">配置说明</a></div></div></div>`;
 }
 function editOutput() {
-  const autoReg = F.autoReg !== false;
-  return `<div class="fg"><label class="fl">自动保存到模型管理</label><div style="display:flex;align-items:center;gap:8px"><label class="tgl"><input type="checkbox" ${autoReg ? 'checked' : ''} onchange="F.autoReg=this.checked;renderAllCards()"/><span class="tgl-s"></span></label><div class="fh" style="margin:0">精调完成后，模型将自动保存到模型管理</div></div></div>${autoReg ? `<div class="fg"><label class="fl">模型名称<span class="rq">*</span></label><input class="fi${errCls('outNm')}" placeholder="请输入产出模型名称，支持英文、数字、中划线" maxlength="50" value="${F.outNm}" oninput="F.outNm=this.value;stepErrors=stepErrors.filter(e=>e!=='outNm')"/><div class="fh">精调产出的模型在模型管理中显示的名称</div>${errTip('outNm','请输入产出模型名称')}</div>` : ''}<div class="pg2"><div class="fg"><label class="fl">导出上限</label><input class="fi" type="number" min="1" max="20" value="${F.expLim}" onchange="F.expLim=+this.value"/><div class="fh">最多保存的 Checkpoint 数量，超过时自动删除最旧的</div></div><div class="fg"><label class="fl">保存间隔 (Steps)</label><input class="fi" type="number" min="50" max="5000" step="50" value="${F.saveInt}" onchange="F.saveInt=+this.value"/><div class="fh">每隔多少步保存一次 Checkpoint</div></div></div>`;
+  return `<div class="fg"><label class="fl">模型名称<span class="rq">*</span></label><input class="fi${errCls('outNm')}" placeholder="请输入产出模型名称，支持英文、数字、中划线" maxlength="50" value="${F.outNm}" oninput="F.outNm=this.value;stepErrors=stepErrors.filter(e=>e!=='outNm')"/><div class="fh">调优产出的模型在模型管理中显示的名称</div>${errTip('outNm','请输入产出模型名称')}</div><div class="fg"><label class="fl">模型描述<span class="rq">*</span></label><textarea class="fta${errCls('outDesc')}" placeholder="请输入模型描述，最多200字" maxlength="200" oninput="F.outDesc=this.value;stepErrors=stepErrors.filter(e=>e!=='outDesc')">${F.outDesc}</textarea><div class="fh">对产出模型的简要说明</div>${errTip('outDesc','请输入模型描述')}</div><div class="fg"><label class="fl">产出保存次数<span class="rq">*</span></label><select class="fs${errCls('saveCount')}" data-cs-width="200px" onchange="F.saveCount=+this.value;stepErrors=stepErrors.filter(e=>e!=='saveCount')">${[1,2,3,4,5].map(v => `<option value="${v}" ${F.saveCount===v?'selected':''}>${v} 次</option>`).join('')}</select><div class="fh">训练过程中最多保存的 Checkpoint 数量</div>${errTip('saveCount','请选择产出保存次数')}</div>`;
 }
 function editResource() {
   const resMode = F.resMode || 'public';
@@ -383,7 +475,7 @@ function updateFeeDisplay() {
 function renderDetail(t){
   const canStop=t.st==='pending'||t.st==='running';
   document.getElementById('d-bar-btns').innerHTML=`
-    <button class="dt-btn primary" onclick="stopDetailTask('${t.id}')" ${canStop?'':'disabled'}>停止训练</button>
+    <button class="dt-btn primary" onclick="stopDetailTask('${t.id}')" ${canStop?'':'disabled'}>终止训练</button>
     <div class="more-wrap">
       <button class="dt-btn secondary" onclick="toggleMoreMenu(event)">更多</button>
       <div class="more-menu" id="more-menu">
@@ -409,7 +501,7 @@ function renderDetail(t){
           <span class="dh-div"></span>
           <span>创建时间：${t.tm}</span>
           <span class="dh-div"></span>
-          <span>描述：${t.nm} - ${t.method} ${t.mode} 精调任务</span>
+          <span>描述：${t.nm} - ${t.method} ${t.mode} 调优任务</span>
         </div>
       </div>
     </div>`;
@@ -445,8 +537,8 @@ function swTab(tab){
       </div></div></div>
       <div class="dsc"><div class="dsc-h"><span class="dsc-ico">📦</span>产出配置</div><div class="dsc-b"><div class="dsc-grid">
         ${ovItem('产出模型名称',t.outNm||'—')}
-        ${ovItem('保存间隔 (Steps)',t.saveInt||'—')}
-        ${ovItem('导出上限',t.expLim||'—')}
+        ${ovItem('模型描述',t.outDesc||'—')}
+        ${ovItem('产出保存次数',t.saveCount?t.saveCount+' 次':'—')}
       </div></div></div>
       <div class="dsc"><div class="dsc-h"><span class="dsc-ico">🖥️</span>资源配置</div><div class="dsc-b"><div class="dsc-grid">
         ${ovItem('资源类型',t.resType||'公共资源')}
@@ -461,7 +553,7 @@ function swTab(tab){
       <div class="dsc"><div class="dsc-h"><span>训练准确率</span></div><div class="dsc-b"><div class="cht"><canvas id="accChart"></canvas></div></div></div>
     </div>`,
     logs:`<div class="dsc"><div class="dsc-h" style="gap:12px;flex-wrap:wrap"><input class="fi" id="log-search" placeholder="搜索关键词" oninput="filterLogs()" style="width:200px;height:28px;font-size:12px;padding:0 10px;flex:none"><select class="fs fs-auto" id="log-count" onchange="filterLogs()" style="height:28px;font-size:12px;padding:0 24px 0 8px;background-position:right 4px center;width:auto;min-width:90px"><option value="500">最近 500 条</option><option value="1000" selected>最近 1000 条</option><option value="2000">最近 2000 条</option></select><div style="display:flex;align-items:center;gap:6px;margin-left:auto"><span style="font-size:12px;color:#878F9B">自动更新</span><label class="tgl"><input type="checkbox" checked id="log-auto" onchange="toggleAutoRefresh()"><span class="tgl-s"></span></label></div></div><div class="dsc-b"><div class="log" id="logBox"></div></div></div>`,
-    output:`<div class="dsc"><div class="dsc-h"><span>模型产出</span></div><div class="dsc-b"><div class="tw"><table><thead><tr><th>版本名称</th><th>Step</th><th>Loss</th><th>保存时间</th><th>模型大小</th><th>操作</th></tr></thead><tbody>${CK.map(c=>`<tr><td style="font-family:monospace;font-size:12px">${c.ver}</td><td>${c.step}</td><td>${c.loss}</td><td>${t.tm.split(' ')[0]} ${c.tm}</td><td>${c.sz}</td><td><button class="dt-btn text" style="color:var(--primary);font-size:12px" onclick="showM('提示','评测功能开发中',[{t:'知道了',c:'bp',a:'hideM()'}])">评测</button><button class="dt-btn text" style="color:var(--primary);font-size:12px;margin-left:12px" onclick="showM('提示','部署功能开发中',[{t:'知道了',c:'bp',a:'hideM()'}])">部署</button></td></tr>`).join('')}</tbody></table></div></div></div>`
+    output:`<div class="dsc"><div class="dsc-h"><span>模型产出</span><span style="margin-left:24px;font-size:13px;color:#878F9B">${t.outNm||'—'}</span></div><div class="dsc-b"><div class="tw"><table><thead><tr><th>版本名称</th><th>Step</th><th>Loss</th><th>保存时间</th><th>模型大小</th><th>操作</th></tr></thead><tbody>${CK.map(c=>`<tr><td style="font-family:monospace;font-size:12px">${c.ver}</td><td>${c.step}</td><td>${c.loss}</td><td>${t.tm.split(' ')[0]} ${c.tm}</td><td>${c.sz}</td><td><button class="dt-btn text" style="color:var(--primary);font-size:12px" onclick="showM('提示','评测功能开发中',[{t:'知道了',c:'bp',a:'hideM()'}])">评测</button><button class="dt-btn text" style="color:var(--primary);font-size:12px;margin-left:12px" onclick="showM('提示','部署功能开发中',[{t:'知道了',c:'bp',a:'hideM()'}])">部署</button></td></tr>`).join('')}</tbody></table></div></div></div>`
   };
   document.getElementById('d-panels').innerHTML=panels[tab];
   if(tab==='monitor')setTimeout(drawCharts,50);

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>模型精调 - Muses 平台</title>
+<title>模型调优 - Muses 平台</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
       <div class="sb-i" title="批量推理"><span class="ic">⚡</span><span>批量推理</span></div>
       <div class="sb-i" title="模型部署"><span class="ic">🚀</span><span>模型部署</span></div>
       <div class="sb-i" title="模型管理"><span class="ic">📦</span><span>模型管理</span></div>
-      <div class="sb-i on" title="模型精调"><span class="ic">🎯</span><span>模型精调</span></div>
+      <div class="sb-i on" title="模型调优"><span class="ic">🎯</span><span>模型调优</span></div>
     </div>
     <div class="sb-sec"><div class="sb-sec-t">数据管理</div>
       <div class="sb-i" title="数据集"><span class="ic">📊</span><span>数据集</span></div>
@@ -75,19 +75,19 @@
       <div class="pb">
           <div class="h-full">
           <div style="padding:0 0 16px 0">
-            <h1 style="font-size:20px;line-height:28px;font-weight:500;color:var(--t1)">模型精调</h1>
+            <h1 style="font-size:20px;line-height:28px;font-weight:500;color:var(--t1)">模型调优</h1>
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;justify-content:space-between">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <select class="fs fs-auto" id="f-st"><option value="">全部状态</option><option value="running">运行中</option><option value="completed">完成</option><option value="failed">失败</option><option value="terminated">终止中</option><option value="pending">排队中</option></select>
+              <select class="fs fs-auto" id="f-st"><option value="">全部状态</option><option value="draft">未提交</option><option value="running">运行中</option><option value="completed">完成</option><option value="failed">失败</option><option value="terminated">终止中</option><option value="pending">排队中</option></select>
               <select class="fs fs-auto" id="f-me"><option value="">训练类型</option><option value="SFT">SFT</option><option value="DPO">DPO</option></select>
               <select class="fs fs-auto" id="f-mo"><option value="">基础模型</option><option>Qwen3-8B</option><option>Qwen3-14B</option><option>DeepSeek-R1-7B</option><option>DeepSeek-R1-32B</option><option>Doubao-Pro-32K</option><option>Doubao-Lite-4K</option></select>
               <input class="fi" style="width:200px" placeholder="搜索任务名称 / ID" id="f-se"/>
             </div>
-            <button class="btn bp" onclick="goCreate()"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M11 11V5H13V11H19V13H13V19H11V13H5V11H11Z"></path></svg><span>创建精调任务</span></button>
+            <button class="btn bp" onclick="goCreate()"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M11 11V5H13V11H19V13H13V19H11V13H5V11H11Z"></path></svg><span>创建调优任务</span></button>
           </div>
           <div class="cd" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;border-radius:8px">
-            <div class="tw" style="flex:1"><table><thead><tr><th style="width:120px">任务 ID</th><th style="width:340px">任务名称</th><th style="width:180px">基础模型</th><th>训练类型</th><th>训练方法</th><th style="min-width:90px">状态</th><th style="width:140px">进度</th><th style="width:120px">创建人</th><th style="width:190px">创建时间</th><th style="min-width:150px">操作</th></tr></thead><tbody id="tlb"></tbody></table></div>
+            <div class="tw" style="flex:1"><table><thead><tr><th style="width:120px">任务 ID</th><th style="width:340px">任务名称</th><th style="width:180px">基础模型</th><th>训练类型</th><th>训练方法</th><th style="min-width:90px">状态</th><th style="width:140px">运行时长</th><th style="width:120px">创建人</th><th style="width:190px">创建时间</th><th style="min-width:150px">操作</th></tr></thead><tbody id="tlb"></tbody></table></div>
           </div>
           <div class="pgn" id="pgn"></div>
         </div>
@@ -98,7 +98,7 @@
     <div class="pg" id="pg-create">
       <div class="create-header">
         <button class="btn bt" onclick="goList()" style="font-size:18px;padding:4px 8px">←</button>
-        <h2 style="font-size:18px;font-weight:600">创建精调任务</h2>
+        <h2 style="font-size:18px;font-weight:600">创建调优任务</h2>
       </div>
       <div class="create-main">
         <div class="create-body" id="c-body"></div>
@@ -110,6 +110,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <button class="btn bc" onclick="goList()">取消</button>
+          <button class="btn bc" onclick="saveTask()">保存任务</button>
           <button class="btn bp" onclick="submitTask()">提交任务</button>
         </div>
       </div>
@@ -121,7 +122,7 @@
       <div class="d-bar" id="d-bar">
         <div class="d-bar-l">
           <button class="back-btn" onclick="goList()">←</button>
-          <span class="d-title">精调任务详情</span>
+          <span class="d-title">调优任务详情</span>
         </div>
         <div class="d-bar-r" id="d-bar-btns"></div>
       </div>
@@ -136,6 +137,9 @@
     </div>
   </div>
 </div>
+
+<!-- List "更多" menu -->
+<div class="list-more-menu" id="list-more-menu" onclick="event.stopPropagation()"></div>
 
 <!-- Canvas for charts -->
 <div style="position:absolute;left:-9999px"><canvas id="offscreen"></canvas></div>
